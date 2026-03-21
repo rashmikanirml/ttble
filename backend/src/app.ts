@@ -1,5 +1,6 @@
 import cors from "cors";
 import express from "express";
+import { examHallResourceManagementRouter } from "./modules/exam-hall-resource-management/index.js";
 import { examTimetableAutoGenerationRouter } from "./modules/exam-timetable-auto-generation/index.js";
 import { userRoleManagementRouter } from "./modules/user-role-management/index.js";
 
@@ -14,6 +15,7 @@ app.get("/health", (_req, res) => {
 
 app.use("/api", userRoleManagementRouter);
 app.use("/api", examTimetableAutoGenerationRouter);
+app.use("/api", examHallResourceManagementRouter);
 
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const message = error instanceof Error ? error.message : "Unexpected server error";
