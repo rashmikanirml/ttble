@@ -212,6 +212,14 @@ main {
   padding: 10px 12px;
 }
 
+.success-banner {
+  color: #0f5f32;
+  background: #e8fff0;
+  border: 1px solid #aadfc0;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
 .app-table {
   width: 100%;
   border-collapse: collapse;

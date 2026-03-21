@@ -35,6 +35,17 @@ export interface TimetableGenerationResult {
   sessions: ExamSession[];
 }
 
+export interface TimetableAdvancedGenerationResult {
+  run: {
+    id: string;
+    dateStart: string;
+    dateEnd: string;
+    status: string;
+  };
+  sessions: ExamSession[];
+  unassignedInvigilationExamIds: string[];
+}
+
 export interface TimetableAiInsights {
   runId: string;
   riskScore: number;
@@ -55,4 +66,35 @@ export interface TimetableSimulationResult {
   availableDays: number;
   schedulePressure: "low" | "medium" | "high";
   notes: string[];
+}
+
+export interface ExamApplication {
+  id: string;
+  examId: string;
+  studentId: string;
+  status: string;
+  noticeText: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InvigilationApplication {
+  id: string;
+  examId: string;
+  staffId: string;
+  status: string;
+  motivation: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TimetableNotificationResult {
+  studentsNotified: number;
+  invigilatorsNotified: number;
+  skipped: number;
+}
+
+export interface TimetableReminderResult {
+  remindersSent: number;
+  skipped: number;
 }

@@ -1,16 +1,22 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
+  applyForExam,
+  applyForInvigilation,
   createExam,
   createSubject,
   getTimetableAiInsights,
   generateTimetable,
+  listExamApplications,
   listExams,
+  listInvigilationApplications,
   listSubjects,
   simulateTimetablePlan,
 } from "../api/examTimetableApi";
 import type {
   Exam,
+  ExamApplication,
   ExamSession,
+  InvigilationApplication,
   Subject,
   TimetableAiInsights,
   TimetableSimulationResult,
@@ -24,6 +30,13 @@ export function ExamTimetableAutoGenerationPage() {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [insights, setInsights] = useState<TimetableAiInsights | null>(null);
   const [simulation, setSimulation] = useState<TimetableSimulationResult | null>(null);
+  const [examApplications, setExamApplications] = useState<ExamApplication[]>([]);
+  const [invigilationApplications, setInvigilationApplications] = useState<InvigilationApplication[]>([]);
+  const [examApplyId, setExamApplyId] = useState("");
+  const [examApplyNotice, setExamApplyNotice] = useState("");
+  const [invigilationExamId, setInvigilationExamId] = useState("");
+  const [invigilationMotivation, setInvigilationMotivation] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const [subjectCode, setSubjectCode] = useState("");
   const [subjectName, setSubjectName] = useState("");
@@ -66,11 +79,24 @@ export function ExamTimetableAutoGenerationPage() {
   async function loadData() {
     try {
       setErrorMessage("");
-      const [subjectData, examData] = await Promise.all([listSubjects(), listExams()]);
+      const [subjectData, examData, examApplicationData, invigilationApplicationData] = await Promise.all([
+        listSubjects(),
+        listExams(),
+        listExamApplications(),
+        listInvigilationApplications(),
+      ]);
       setSubjects(subjectData);
       setExams(examData);
+      setExamApplications(examApplicationData);
+      setInvigilationApplications(invigilationApplicationData);
       if (!examSubjectId && subjectData.length) {
         setExamSubjectId(subjectData[0].id);
+      }
+      if (!examApplyId && examData.length) {
+        setExamApplyId(examData[0].id);
+      }
+      if (!invigilationExamId && examData.length) {
+        setInvigilationExamId(examData[0].id);
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to load data");
@@ -85,6 +111,7 @@ export function ExamTimetableAutoGenerationPage() {
     event.preventDefault();
     try {
       setErrorMessage("");
+      setSuccessMessage("");
       if (subjectCode.trim().length < 2 || subjectCode.trim().length > 20) {
         setErrorMessage("Subject code must be between 2 and 20 characters.");
         return;
@@ -111,6 +138,7 @@ export function ExamTimetableAutoGenerationPage() {
     event.preventDefault();
     try {
       setErrorMessage("");
+      setSuccessMessage("");
       if (!examSubjectId) {
         setErrorMessage("Select a subject before creating an exam.");
         return;
@@ -144,6 +172,7 @@ export function ExamTimetableAutoGenerationPage() {
     event.preventDefault();
     try {
       setErrorMessage("");
+      setSuccessMessage("");
       if (!dateStart || !dateEnd) {
         setErrorMessage("Select both start and end dates.");
         return;
@@ -171,8 +200,50 @@ export function ExamTimetableAutoGenerationPage() {
       setSessions(generated.sessions);
       const aiInsights = await getTimetableAiInsights(generated.run.id);
       setInsights(aiInsights);
+      setSuccessMessage("Timetable generated successfully.");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to generate timetable");
+    }
+  }
+
+  async function onApplyForExam(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try {
+      setErrorMessage("");
+      setSuccessMessage("");
+      if (!examApplyId) {
+        setErrorMessage("Select an exam to apply.");
+        return;
+      }
+      await applyForExam({ examId: examApplyId, noticeText: examApplyNotice.trim() || undefined });
+      setExamApplyNotice("");
+      setSuccessMessage("Exam application submitted.");
+      const refreshed = await listExamApplications();
+      setExamApplications(refreshed);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to submit exam application");
+    }
+  }
+
+  async function onApplyForInvigilation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try {
+      setErrorMessage("");
+      setSuccessMessage("");
+      if (!invigilationExamId) {
+        setErrorMessage("Select an exam for invigilation application.");
+        return;
+      }
+      await applyForInvigilation({
+        examId: invigilationExamId,
+        motivation: invigilationMotivation.trim() || undefined,
+      });
+      setInvigilationMotivation("");
+      setSuccessMessage("Invigilation application submitted.");
+      const refreshed = await listInvigilationApplications();
+      setInvigilationApplications(refreshed);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to submit invigilation application");
     }
   }
 
@@ -188,6 +259,110 @@ export function ExamTimetableAutoGenerationPage() {
       </section>
 
       {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
+      {successMessage ? <div className="success-banner">{successMessage}</div> : null}
+
+      <section className="card">
+        <h2>Student Exam Applications</h2>
+        <form onSubmit={onApplyForExam} className="form-grid">
+          <select className="app-select" value={examApplyId} onChange={(event) => setExamApplyId(event.target.value)} required>
+            <option value="" disabled>
+              Select Exam
+            </option>
+            {exams.map((exam) => (
+              <option key={exam.id} value={exam.id}>
+                {exam.examType} - {exam.studentCohort}
+              </option>
+            ))}
+          </select>
+          <textarea
+            className="app-input"
+            value={examApplyNotice}
+            onChange={(event) => setExamApplyNotice(event.target.value)}
+            placeholder="Notice/Reason"
+            rows={3}
+          />
+          <button className="app-button" type="submit">Apply for Exam</button>
+        </form>
+        {examApplications.length ? (
+          <table className="app-table">
+            <thead>
+              <tr>
+                <th align="left">Exam</th>
+                <th align="left">Status</th>
+                <th align="left">Notice</th>
+              </tr>
+            </thead>
+            <tbody>
+              {examApplications.map((app) => {
+                const exam = examIndex.get(app.examId);
+                return (
+                  <tr key={app.id}>
+                    <td>{exam ? `${exam.examType} (${exam.studentCohort})` : app.examId}</td>
+                    <td>{app.status}</td>
+                    <td>{app.noticeText || "-"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        ) : (
+          <p>No exam applications yet.</p>
+        )}
+      </section>
+
+      <section className="card">
+        <h2>Lecturer Invigilation Applications</h2>
+        <form onSubmit={onApplyForInvigilation} className="form-grid">
+          <select
+            className="app-select"
+            value={invigilationExamId}
+            onChange={(event) => setInvigilationExamId(event.target.value)}
+            required
+          >
+            <option value="" disabled>
+              Select Exam
+            </option>
+            {exams.map((exam) => (
+              <option key={exam.id} value={exam.id}>
+                {exam.examType} - {exam.studentCohort}
+              </option>
+            ))}
+          </select>
+          <textarea
+            className="app-input"
+            value={invigilationMotivation}
+            onChange={(event) => setInvigilationMotivation(event.target.value)}
+            placeholder="Motivation"
+            rows={3}
+          />
+          <button className="app-button" type="submit">Apply for Invigilation</button>
+        </form>
+        {invigilationApplications.length ? (
+          <table className="app-table">
+            <thead>
+              <tr>
+                <th align="left">Exam</th>
+                <th align="left">Status</th>
+                <th align="left">Motivation</th>
+              </tr>
+            </thead>
+            <tbody>
+              {invigilationApplications.map((app) => {
+                const exam = examIndex.get(app.examId);
+                return (
+                  <tr key={app.id}>
+                    <td>{exam ? `${exam.examType} (${exam.studentCohort})` : app.examId}</td>
+                    <td>{app.status}</td>
+                    <td>{app.motivation || "-"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        ) : (
+          <p>No invigilation applications yet.</p>
+        )}
+      </section>
 
       <section className="card">
         <h2>Create Subject</h2>
