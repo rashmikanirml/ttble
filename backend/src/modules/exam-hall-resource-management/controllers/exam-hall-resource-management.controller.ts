@@ -1,10 +1,17 @@
 import { NextFunction, Request, Response, Router } from "express";
+import { requireAuth, requireRole } from "../../../middleware/auth.js";
+import { validateBody, validators } from "../../../middleware/validation.js";
 import { ExamHallResourceManagementService } from "../services/exam-hall-resource-management.service.js";
 
 const service = new ExamHallResourceManagementService();
 export const examHallResourceManagementRouter = Router();
 
-examHallResourceManagementRouter.post("/halls", async (req: Request, res: Response, next: NextFunction) => {
+examHallResourceManagementRouter.post("/halls", requireAuth, requireRole(["admin", "staff"]), validateBody({
+  code: validators.asString("code", 2, 20),
+  name: validators.asString("name", 3, 120),
+  location: validators.asString("location", 2, 120),
+  capacity: validators.asNumber("capacity", 1, 5000),
+}), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const created = await service.createHall(req.body);
     res.status(201).json(created);
@@ -13,7 +20,7 @@ examHallResourceManagementRouter.post("/halls", async (req: Request, res: Respon
   }
 });
 
-examHallResourceManagementRouter.get("/halls", async (_req: Request, res: Response, next: NextFunction) => {
+examHallResourceManagementRouter.get("/halls", requireAuth, async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const halls = await service.listHalls();
     res.json(halls);
@@ -22,7 +29,7 @@ examHallResourceManagementRouter.get("/halls", async (_req: Request, res: Respon
   }
 });
 
-examHallResourceManagementRouter.patch("/halls/:id", async (req: Request, res: Response, next: NextFunction) => {
+examHallResourceManagementRouter.patch("/halls/:id", requireAuth, requireRole(["admin", "staff"]), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const updated = await service.updateHall(req.params.id, req.body);
     if (!updated) {
@@ -35,7 +42,7 @@ examHallResourceManagementRouter.patch("/halls/:id", async (req: Request, res: R
   }
 });
 
-examHallResourceManagementRouter.delete("/halls/:id", async (req: Request, res: Response, next: NextFunction) => {
+examHallResourceManagementRouter.delete("/halls/:id", requireAuth, requireRole(["admin"]), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const archived = await service.archiveHall(req.params.id);
     if (!archived) {
@@ -50,6 +57,8 @@ examHallResourceManagementRouter.delete("/halls/:id", async (req: Request, res: 
 
 examHallResourceManagementRouter.put(
   "/halls/:id/facilities",
+  requireAuth,
+  requireRole(["admin", "staff"]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const facility = await service.upsertHallFacility(req.params.id, req.body);
@@ -62,6 +71,12 @@ examHallResourceManagementRouter.put(
 
 examHallResourceManagementRouter.post(
   "/hall-bookings",
+  requireAuth,
+  requireRole(["admin", "staff"]),
+  validateBody({
+    hallId: validators.asString("hallId", 8, 64),
+    examSessionId: validators.asString("examSessionId", 8, 64),
+  }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const created = await service.createHallBooking(req.body);
@@ -74,6 +89,7 @@ examHallResourceManagementRouter.post(
 
 examHallResourceManagementRouter.get(
   "/hall-bookings",
+  requireAuth,
   async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const bookings = await service.listHallBookings();
@@ -86,6 +102,8 @@ examHallResourceManagementRouter.get(
 
 examHallResourceManagementRouter.patch(
   "/hall-bookings/:id",
+  requireAuth,
+  requireRole(["admin", "staff"]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const updated = await service.updateHallBooking(req.params.id, req.body);
@@ -102,6 +120,8 @@ examHallResourceManagementRouter.patch(
 
 examHallResourceManagementRouter.delete(
   "/hall-bookings/:id",
+  requireAuth,
+  requireRole(["admin", "staff"]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const cancelled = await service.cancelHallBooking(req.params.id);

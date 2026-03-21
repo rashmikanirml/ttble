@@ -1,5 +1,7 @@
 import cors from "cors";
 import express from "express";
+import { authRouter } from "./modules/auth.controller.js";
+import { dashboardRouter } from "./modules/dashboard/dashboard.controller.js";
 import { examHallResourceManagementRouter } from "./modules/exam-hall-resource-management/index.js";
 import { examTimetableAutoGenerationRouter } from "./modules/exam-timetable-auto-generation/index.js";
 import { staffAllocationRepeatProrataRouter } from "./modules/staff-allocation-repeat-prorata/index.js";
@@ -14,6 +16,8 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+app.use("/api", authRouter);
+app.use("/api", dashboardRouter);
 app.use("/api", userRoleManagementRouter);
 app.use("/api", examTimetableAutoGenerationRouter);
 app.use("/api", examHallResourceManagementRouter);

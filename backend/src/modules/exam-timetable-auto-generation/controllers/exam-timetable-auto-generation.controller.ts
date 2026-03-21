@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response, Router } from "express";
+import { requireAuth, requireRole } from "../../../middleware/auth.js";
 import { ExamTimetableAutoGenerationService } from "../services/exam-timetable-auto-generation.service.js";
 
 const service = new ExamTimetableAutoGenerationService();
@@ -6,6 +7,8 @@ export const examTimetableAutoGenerationRouter = Router();
 
 examTimetableAutoGenerationRouter.post(
   "/subjects",
+  requireAuth,
+  requireRole(["admin", "staff"]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const created = await service.createSubject(req.body);
@@ -18,6 +21,7 @@ examTimetableAutoGenerationRouter.post(
 
 examTimetableAutoGenerationRouter.get(
   "/subjects",
+  requireAuth,
   async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const subjects = await service.listSubjects();
@@ -30,6 +34,8 @@ examTimetableAutoGenerationRouter.get(
 
 examTimetableAutoGenerationRouter.patch(
   "/subjects/:id",
+  requireAuth,
+  requireRole(["admin", "staff"]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const updated = await service.updateSubject(req.params.id, req.body);
@@ -46,6 +52,8 @@ examTimetableAutoGenerationRouter.patch(
 
 examTimetableAutoGenerationRouter.delete(
   "/subjects/:id",
+  requireAuth,
+  requireRole(["admin"]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const deleted = await service.deleteSubject(req.params.id);
@@ -62,6 +70,8 @@ examTimetableAutoGenerationRouter.delete(
 
 examTimetableAutoGenerationRouter.post(
   "/exams",
+  requireAuth,
+  requireRole(["admin", "staff"]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const created = await service.createExam(req.body);
@@ -74,6 +84,7 @@ examTimetableAutoGenerationRouter.post(
 
 examTimetableAutoGenerationRouter.get(
   "/exams",
+  requireAuth,
   async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const exams = await service.listExams();
@@ -86,6 +97,8 @@ examTimetableAutoGenerationRouter.get(
 
 examTimetableAutoGenerationRouter.patch(
   "/exams/:id",
+  requireAuth,
+  requireRole(["admin", "staff"]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const updated = await service.updateExam(req.params.id, req.body);
@@ -102,6 +115,8 @@ examTimetableAutoGenerationRouter.patch(
 
 examTimetableAutoGenerationRouter.delete(
   "/exams/:id",
+  requireAuth,
+  requireRole(["admin"]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const deleted = await service.deleteExam(req.params.id);
@@ -118,6 +133,8 @@ examTimetableAutoGenerationRouter.delete(
 
 examTimetableAutoGenerationRouter.post(
   "/timetable-runs/generate",
+  requireAuth,
+  requireRole(["admin", "staff"]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const generated = await service.generateTimetable(req.body);
@@ -130,6 +147,7 @@ examTimetableAutoGenerationRouter.post(
 
 examTimetableAutoGenerationRouter.get(
   "/timetable-runs/:id",
+  requireAuth,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const data = await service.getTimetableRunWithSessions(req.params.id);
@@ -146,6 +164,8 @@ examTimetableAutoGenerationRouter.get(
 
 examTimetableAutoGenerationRouter.patch(
   "/exam-sessions/:id",
+  requireAuth,
+  requireRole(["admin", "staff"]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const updated = await service.updateExamSession(req.params.id, req.body);
@@ -162,6 +182,7 @@ examTimetableAutoGenerationRouter.patch(
 
 examTimetableAutoGenerationRouter.get(
   "/timetable-runs/:id/ai-insights",
+  requireAuth,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const insights = await service.getTimetableAiInsights(req.params.id);
@@ -178,6 +199,8 @@ examTimetableAutoGenerationRouter.get(
 
 examTimetableAutoGenerationRouter.post(
   "/timetable-runs/ai-simulate",
+  requireAuth,
+  requireRole(["admin", "staff"]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = service.simulateTimetablePlan(req.body);

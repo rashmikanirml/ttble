@@ -1,10 +1,12 @@
 import { NextFunction, Request, Response, Router } from "express";
+import { requireAuth, requireRole } from "../../../middleware/auth.js";
+import { validateBody, validators } from "../../../middleware/validation.js";
 import { UserRoleManagementService } from "../services/user-role-management.service.js";
 
 const service = new UserRoleManagementService();
 export const userRoleManagementRouter = Router();
 
-userRoleManagementRouter.get("/users", async (req: Request, res: Response, next: NextFunction) => {
+userRoleManagementRouter.get("/users", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const role = typeof req.query.role === "string" ? req.query.role : undefined;
     const status = typeof req.query.status === "string" ? req.query.status : undefined;
@@ -15,7 +17,7 @@ userRoleManagementRouter.get("/users", async (req: Request, res: Response, next:
   }
 });
 
-userRoleManagementRouter.get("/users/:id", async (req: Request, res: Response, next: NextFunction) => {
+userRoleManagementRouter.get("/users/:id", requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = await service.getUserById(req.params.id);
     if (!user) {
@@ -29,16 +31,27 @@ userRoleManagementRouter.get("/users/:id", async (req: Request, res: Response, n
   }
 });
 
-userRoleManagementRouter.post("/users", async (req: Request, res: Response, next: NextFunction) => {
+userRoleManagementRouter.post(
+  "/users",
+  requireAuth,
+  requireRole(["admin"]),
+  validateBody({
+    fullName: validators.asString("fullName", 3, 150),
+    email: validators.asString("email", 5, 255),
+    passwordHash: validators.asString("passwordHash", 4, 255),
+    role: validators.asEnum("role", ["student", "staff", "admin"]),
+  }),
+  async (req: Request, res: Response, next: NextFunction) => {
   try {
     const created = await service.createUser(req.body);
     res.status(201).json(created);
   } catch (error) {
     next(error);
   }
-});
+  },
+);
 
-userRoleManagementRouter.patch("/users/:id", async (req: Request, res: Response, next: NextFunction) => {
+userRoleManagementRouter.patch("/users/:id", requireAuth, requireRole(["admin"]), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const updated = await service.updateUser(req.params.id, req.body);
     if (!updated) {
@@ -52,7 +65,7 @@ userRoleManagementRouter.patch("/users/:id", async (req: Request, res: Response,
   }
 });
 
-userRoleManagementRouter.delete("/users/:id", async (req: Request, res: Response, next: NextFunction) => {
+userRoleManagementRouter.delete("/users/:id", requireAuth, requireRole(["admin"]), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const ok = await service.deactivateUser(req.params.id);
     if (!ok) {
@@ -68,6 +81,8 @@ userRoleManagementRouter.delete("/users/:id", async (req: Request, res: Response
 
 userRoleManagementRouter.put(
   "/students/:userId/profile",
+  requireAuth,
+  requireRole(["admin", "staff"]),
   async (req: Request, res: Response, next: NextFunction) => {
   try {
     const profile = await service.upsertStudentProfile({
@@ -83,6 +98,8 @@ userRoleManagementRouter.put(
 
 userRoleManagementRouter.put(
   "/staff/:userId/profile",
+  requireAuth,
+  requireRole(["admin"]),
   async (req: Request, res: Response, next: NextFunction) => {
   try {
     const profile = await service.upsertStaffProfile({
