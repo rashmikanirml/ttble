@@ -108,6 +108,17 @@ create table if not exists student_exam_eligibility (
   primary key (student_id, exam_id)
 );
 
+create table if not exists exam_student_applications (
+  id uuid primary key,
+  exam_id uuid not null references exams(id),
+  student_id uuid not null references users(id),
+  status varchar(20) not null default 'pending',
+  notice_text text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (exam_id, student_id)
+);
+
 create table if not exists staff_availability (
   id uuid primary key,
   staff_id uuid not null references users(id),
@@ -127,6 +138,29 @@ create table if not exists staff_assignments (
   status varchar(20) not null default 'assigned',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
+);
+
+create table if not exists invigilation_applications (
+  id uuid primary key,
+  exam_id uuid not null references exams(id),
+  staff_id uuid not null references users(id),
+  status varchar(20) not null default 'pending',
+  motivation text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (exam_id, staff_id)
+);
+
+create table if not exists notification_logs (
+  id uuid primary key,
+  kind varchar(30) not null,
+  recipient varchar(255) not null,
+  entity_key varchar(120) not null,
+  channel varchar(30) not null,
+  payload_json jsonb not null,
+  external_ref varchar(255),
+  sent_at timestamptz not null default now(),
+  unique (kind, recipient, entity_key)
 );
 
 create table if not exists repeat_prorata_applications (

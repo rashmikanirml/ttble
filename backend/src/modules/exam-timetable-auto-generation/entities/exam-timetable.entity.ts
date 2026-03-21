@@ -40,3 +40,23 @@ export interface ExamSession {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ExamStudentApplication {
+  id: string;
+  examId: string;
+  studentId: string;
+  status: string;
+  noticeText: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InvigilationApplication {
+  id: string;
+  examId: string;
+  staffId: string;
+  status: string;
+  motivation: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

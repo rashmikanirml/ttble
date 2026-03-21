@@ -1,9 +1,105 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { requireAuth, requireRole } from "../../../middleware/auth.js";
+import { AuthRequest, requireAuth, requireRole } from "../../../middleware/auth.js";
 import { ExamTimetableAutoGenerationService } from "../services/exam-timetable-auto-generation.service.js";
 
 const service = new ExamTimetableAutoGenerationService();
 export const examTimetableAutoGenerationRouter = Router();
+
+examTimetableAutoGenerationRouter.post(
+  "/exam-applications",
+  requireAuth,
+  requireRole(["student"]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const authReq = req as AuthRequest;
+      const created = await service.createStudentExamApplication(authReq.auth!.userId, req.body);
+      res.status(201).json(created);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+examTimetableAutoGenerationRouter.get(
+  "/exam-applications",
+  requireAuth,
+  requireRole(["admin", "staff"]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const status = typeof req.query.status === "string" ? req.query.status : undefined;
+      const applications = await service.listStudentExamApplications(status);
+      res.json(applications);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+examTimetableAutoGenerationRouter.patch(
+  "/exam-applications/:id/decision",
+  requireAuth,
+  requireRole(["admin", "staff"]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const decided = await service.decideStudentExamApplication(req.params.id, req.body);
+      if (!decided) {
+        res.status(404).json({ message: "Exam application not found" });
+        return;
+      }
+      res.json(decided);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+examTimetableAutoGenerationRouter.post(
+  "/invigilation-applications",
+  requireAuth,
+  requireRole(["staff", "admin"]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const authReq = req as AuthRequest;
+      const created = await service.createInvigilationApplication(authReq.auth!.userId, req.body);
+      res.status(201).json(created);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+examTimetableAutoGenerationRouter.get(
+  "/invigilation-applications",
+  requireAuth,
+  requireRole(["admin", "staff"]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const status = typeof req.query.status === "string" ? req.query.status : undefined;
+      const applications = await service.listInvigilationApplications(status);
+      res.json(applications);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+examTimetableAutoGenerationRouter.patch(
+  "/invigilation-applications/:id/decision",
+  requireAuth,
+  requireRole(["admin"]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const decided = await service.decideInvigilationApplication(req.params.id, req.body);
+      if (!decided) {
+        res.status(404).json({ message: "Invigilation application not found" });
+        return;
+      }
+      res.json(decided);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 examTimetableAutoGenerationRouter.post(
   "/subjects",
@@ -125,6 +221,55 @@ examTimetableAutoGenerationRouter.delete(
         return;
       }
       res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+examTimetableAutoGenerationRouter.post(
+  "/timetable-runs/generate-advanced",
+  requireAuth,
+  requireRole(["admin", "staff"]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const generated = await service.generateAdvancedTimetable(req.body);
+      res.status(201).json(generated);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+examTimetableAutoGenerationRouter.post(
+  "/timetable-runs/:id/notify",
+  requireAuth,
+  requireRole(["admin", "staff"]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await service.notifyTimetablePublished(req.params.id);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+examTimetableAutoGenerationRouter.post(
+  "/timetable-runs/:id/reminders",
+  requireAuth,
+  requireRole(["admin", "staff"]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const hoursBefore =
+        typeof req.body?.hoursBefore === "number" && Number.isFinite(req.body.hoursBefore)
+          ? req.body.hoursBefore
+          : undefined;
+      const result = await service.sendReminderNotifications({
+        runId: req.params.id,
+        hoursBefore,
+      });
+      res.json(result);
     } catch (error) {
       next(error);
     }

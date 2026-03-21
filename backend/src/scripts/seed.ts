@@ -45,6 +45,17 @@ const IDS = {
     app1: "12121212-1212-4121-8121-121212121211",
     app2: "12121212-1212-4121-8121-121212121212",
   },
+  examStudentApplications: {
+    esa1: "56565656-5656-4565-8565-565656565651",
+    esa2: "56565656-5656-4565-8565-565656565652",
+    esa3: "56565656-5656-4565-8565-565656565653",
+    esa4: "56565656-5656-4565-8565-565656565654",
+  },
+  invigilationApplications: {
+    ia1: "78787878-7878-4787-8787-787878787871",
+    ia2: "78787878-7878-4787-8787-787878787872",
+    ia3: "78787878-7878-4787-8787-787878787873",
+  },
   approvals: {
     ap1: "34343434-3434-4343-8343-343434343431",
   },
@@ -329,6 +340,54 @@ async function main() {
      do update set
        eligibility_type = excluded.eligibility_type`,
     [studentOneId, studentTwoId, IDS.exams.exam1, IDS.exams.exam2, IDS.exams.exam3],
+  );
+
+  await db.query(
+    `insert into exam_student_applications (id, exam_id, student_id, status, notice_text)
+     values
+       ($1, $5, $8, 'approved', 'I confirm participation for final exam session.'),
+       ($2, $6, $8, 'approved', 'Need this exam for semester completion.'),
+       ($3, $5, $9, 'approved', 'Repeat attempt after approved repeat application.'),
+       ($4, $7, $9, 'pending', 'Requesting seat for the midterm due to overlap issues.')
+     on conflict (exam_id, student_id)
+     do update set
+       status = excluded.status,
+       notice_text = excluded.notice_text,
+       updated_at = now()`,
+    [
+      IDS.examStudentApplications.esa1,
+      IDS.examStudentApplications.esa2,
+      IDS.examStudentApplications.esa3,
+      IDS.examStudentApplications.esa4,
+      IDS.exams.exam1,
+      IDS.exams.exam2,
+      IDS.exams.exam3,
+      studentOneId,
+      studentTwoId,
+    ],
+  );
+
+  await db.query(
+    `insert into invigilation_applications (id, exam_id, staff_id, status, motivation)
+     values
+       ($1, $4, $7, 'approved', 'Experienced in managing large halls.'),
+       ($2, $5, $8, 'approved', 'Available for long duration exams.'),
+       ($3, $6, $7, 'pending', 'Can support as reserve invigilator.')
+     on conflict (exam_id, staff_id)
+     do update set
+       status = excluded.status,
+       motivation = excluded.motivation,
+       updated_at = now()`,
+    [
+      IDS.invigilationApplications.ia1,
+      IDS.invigilationApplications.ia2,
+      IDS.invigilationApplications.ia3,
+      IDS.exams.exam1,
+      IDS.exams.exam2,
+      IDS.exams.exam3,
+      staffOneId,
+      staffTwoId,
+    ],
   );
 
   await db.query(

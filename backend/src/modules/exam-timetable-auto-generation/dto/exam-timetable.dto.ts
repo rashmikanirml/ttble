@@ -47,3 +47,35 @@ export interface TimetableSimulationDto {
   totalExams: number;
   maxExamsPerDay: number;
 }
+
+export interface CreateExamStudentApplicationDto {
+  examId: string;
+  noticeText?: string;
+}
+
+export interface DecideExamStudentApplicationDto {
+  status: "approved" | "rejected";
+}
+
+export interface CreateInvigilationApplicationDto {
+  examId: string;
+  motivation?: string;
+}
+
+export interface DecideInvigilationApplicationDto {
+  status: "approved" | "rejected";
+}
+
+export interface GenerateAdvancedTimetableDto {
+  dateStart: string;
+  dateEnd: string;
+  createdBy: string;
+  startTime?: string;
+  maxExamsPerDay?: number;
+  slotGapMinutes?: number;
+}
+
+export interface SendReminderNotificationsDto {
+  runId: string;
+  hoursBefore?: number;
+}
