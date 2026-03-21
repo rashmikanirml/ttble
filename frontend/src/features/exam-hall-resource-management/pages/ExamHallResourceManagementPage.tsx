@@ -54,7 +54,24 @@ export function ExamHallResourceManagementPage() {
     event.preventDefault();
     try {
       setErrorMessage("");
-      await createHall({ code, name, location, capacity });
+      if (code.trim().length < 2 || code.trim().length > 20) {
+        setErrorMessage("Hall code must be between 2 and 20 characters.");
+        return;
+      }
+      if (name.trim().length < 3) {
+        setErrorMessage("Hall name must be at least 3 characters.");
+        return;
+      }
+      if (location.trim().length < 3) {
+        setErrorMessage("Location must be at least 3 characters.");
+        return;
+      }
+      if (capacity < 1 || capacity > 5000) {
+        setErrorMessage("Capacity must be between 1 and 5000.");
+        return;
+      }
+
+      await createHall({ code: code.trim(), name: name.trim(), location: location.trim(), capacity });
       setCode("");
       setName("");
       setLocation("");
@@ -69,6 +86,10 @@ export function ExamHallResourceManagementPage() {
     event.preventDefault();
     try {
       setErrorMessage("");
+      if (!facilityHallId) {
+        setErrorMessage("Select a hall before updating facilities.");
+        return;
+      }
       await upsertHallFacility(facilityHallId, {
         hasAc,
         hasComputers,
@@ -85,7 +106,16 @@ export function ExamHallResourceManagementPage() {
     event.preventDefault();
     try {
       setErrorMessage("");
-      await createHallBooking({ hallId: bookingHallId, examSessionId });
+      if (!bookingHallId) {
+        setErrorMessage("Select a hall for booking.");
+        return;
+      }
+      if (examSessionId.trim().length < 8) {
+        setErrorMessage("Exam Session ID must be at least 8 characters.");
+        return;
+      }
+
+      await createHallBooking({ hallId: bookingHallId, examSessionId: examSessionId.trim() });
       setExamSessionId("");
       await loadData();
     } catch (error) {
@@ -104,18 +134,22 @@ export function ExamHallResourceManagementPage() {
   }
 
   return (
-    <main style={{ maxWidth: 1100, margin: "24px auto", fontFamily: "sans-serif" }}>
-      <h1>Exam Hall &amp; Resource Management</h1>
-      <p>Manage halls, facilities, and booking allocations with clash prevention.</p>
-      {errorMessage ? <p style={{ color: "crimson" }}>{errorMessage}</p> : null}
+    <main>
+      <section className="page-header">
+        <h1>Exam Hall &amp; Resource Management</h1>
+        <p>Manage hall inventory, facilities, and booking allocations with clash prevention.</p>
+      </section>
 
-      <section style={{ marginBottom: 24 }}>
+      {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
+
+      <section className="card">
         <h2>Create Hall</h2>
-        <form onSubmit={onCreateHall} style={{ display: "grid", gap: 8, maxWidth: 420 }}>
-          <input value={code} onChange={(event) => setCode(event.target.value)} placeholder="Code" required />
-          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name" required />
-          <input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Location" required />
+        <form onSubmit={onCreateHall} className="form-grid">
+          <input className="app-input" value={code} onChange={(event) => setCode(event.target.value)} placeholder="Code" required />
+          <input className="app-input" value={name} onChange={(event) => setName(event.target.value)} placeholder="Name" required />
+          <input className="app-input" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Location" required />
           <input
+            className="app-input"
             type="number"
             value={capacity}
             min={1}
@@ -123,52 +157,52 @@ export function ExamHallResourceManagementPage() {
             placeholder="Capacity"
             required
           />
-          <button type="submit">Add Hall</button>
+          <button className="app-button" type="submit">Add Hall</button>
         </form>
       </section>
 
-      <section style={{ marginBottom: 24 }}>
+      <section className="card">
         <h2>Update Hall Facilities</h2>
-        <form onSubmit={onUpdateFacility} style={{ display: "grid", gap: 8, maxWidth: 420 }}>
-          <select value={facilityHallId} onChange={(event) => setFacilityHallId(event.target.value)} required>
+        <form onSubmit={onUpdateFacility} className="form-grid">
+          <select className="app-select" value={facilityHallId} onChange={(event) => setFacilityHallId(event.target.value)} required>
             {halls.map((hall) => (
               <option key={hall.id} value={hall.id}>
                 {hall.code} - {hall.name}
               </option>
             ))}
           </select>
-          <label>
+          <label className="inline-row">
             <input type="checkbox" checked={hasAc} onChange={(event) => setHasAc(event.target.checked)} /> Has AC
           </label>
-          <label>
+          <label className="inline-row">
             <input
               type="checkbox"
               checked={hasComputers}
               onChange={(event) => setHasComputers(event.target.checked)}
             /> Has Computers
           </label>
-          <label>
+          <label className="inline-row">
             <input
               type="checkbox"
               checked={hasAccessibilitySupport}
               onChange={(event) => setHasAccessibilitySupport(event.target.checked)}
             /> Accessibility Support
           </label>
-          <label>
+          <label className="inline-row">
             <input
               type="checkbox"
               checked={hasSpecialNeedsSupport}
               onChange={(event) => setHasSpecialNeedsSupport(event.target.checked)}
             /> Special Needs Support
           </label>
-          <button type="submit">Save Facilities</button>
+          <button className="app-button" type="submit">Save Facilities</button>
         </form>
       </section>
 
-      <section style={{ marginBottom: 24 }}>
+      <section className="card">
         <h2>Create Hall Booking</h2>
-        <form onSubmit={onCreateBooking} style={{ display: "grid", gap: 8, maxWidth: 420 }}>
-          <select value={bookingHallId} onChange={(event) => setBookingHallId(event.target.value)} required>
+        <form onSubmit={onCreateBooking} className="form-grid">
+          <select className="app-select" value={bookingHallId} onChange={(event) => setBookingHallId(event.target.value)} required>
             {halls.filter((hall) => hall.status === "active").map((hall) => (
               <option key={hall.id} value={hall.id}>
                 {hall.code} - {hall.name}
@@ -176,21 +210,22 @@ export function ExamHallResourceManagementPage() {
             ))}
           </select>
           <input
+            className="app-input"
             value={examSessionId}
             onChange={(event) => setExamSessionId(event.target.value)}
             placeholder="Exam Session ID"
             required
           />
-          <button type="submit">Book Hall</button>
+          <button className="app-button" type="submit">Book Hall</button>
         </form>
       </section>
 
-      <section style={{ marginBottom: 24 }}>
+      <section className="card">
         <h2>Halls</h2>
         {!halls.length ? (
           <p>No halls yet.</p>
         ) : (
-          <table cellPadding={8} style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table className="app-table">
             <thead>
               <tr>
                 <th align="left">Code</th>
@@ -214,6 +249,7 @@ export function ExamHallResourceManagementPage() {
                       type="button"
                       onClick={() => onArchiveHall(hall.id)}
                       disabled={hall.status === "inactive"}
+                      className="app-button"
                     >
                       Archive
                     </button>
@@ -225,12 +261,12 @@ export function ExamHallResourceManagementPage() {
         )}
       </section>
 
-      <section>
+      <section className="card">
         <h2>Hall Bookings</h2>
         {!bookings.length ? (
           <p>No bookings yet.</p>
         ) : (
-          <table cellPadding={8} style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table className="app-table">
             <thead>
               <tr>
                 <th align="left">Booking ID</th>

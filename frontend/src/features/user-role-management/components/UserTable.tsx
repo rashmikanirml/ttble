@@ -11,7 +11,7 @@ export function UserTable({ users, onDeactivate }: UserTableProps) {
   }
 
   return (
-    <table cellPadding={8} style={{ width: "100%", borderCollapse: "collapse" }}>
+    <table className="app-table">
       <thead>
         <tr>
           <th align="left">Name</th>
@@ -33,6 +33,7 @@ export function UserTable({ users, onDeactivate }: UserTableProps) {
                 onClick={() => onDeactivate(user.id)}
                 disabled={user.status === "inactive"}
                 type="button"
+                className="app-button"
               >
                 Deactivate
               </button>

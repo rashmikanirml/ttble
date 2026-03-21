@@ -40,3 +40,10 @@ export interface UpdateExamSessionDto {
   hallId?: string | null;
   status?: string;
 }
+
+export interface TimetableSimulationDto {
+  dateStart: string;
+  dateEnd: string;
+  totalExams: number;
+  maxExamsPerDay: number;
+}

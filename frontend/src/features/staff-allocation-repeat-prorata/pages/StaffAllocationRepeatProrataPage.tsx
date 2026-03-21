@@ -58,7 +58,20 @@ export function StaffAllocationRepeatProrataPage() {
     event.preventDefault();
     try {
       setErrorMessage("");
-      await createAvailability({ staffId, availableDate, startTime, endTime });
+      if (staffId.trim().length < 6) {
+        setErrorMessage("Staff ID must be at least 6 characters.");
+        return;
+      }
+      if (!availableDate) {
+        setErrorMessage("Pick an availability date.");
+        return;
+      }
+      if (startTime >= endTime) {
+        setErrorMessage("Availability start time must be earlier than end time.");
+        return;
+      }
+
+      await createAvailability({ staffId: staffId.trim(), availableDate, startTime, endTime });
       setStaffId("");
       setAvailableDate("");
       await loadData();
@@ -71,7 +84,16 @@ export function StaffAllocationRepeatProrataPage() {
     event.preventDefault();
     try {
       setErrorMessage("");
-      await createAssignment({ examSessionId, staffId: assignStaffId, roleInSession });
+      if (examSessionId.trim().length < 8) {
+        setErrorMessage("Exam Session ID must be at least 8 characters.");
+        return;
+      }
+      if (assignStaffId.trim().length < 6) {
+        setErrorMessage("Staff ID must be at least 6 characters.");
+        return;
+      }
+
+      await createAssignment({ examSessionId: examSessionId.trim(), staffId: assignStaffId.trim(), roleInSession });
       setExamSessionId("");
       setAssignStaffId("");
       await loadData();
@@ -84,12 +106,25 @@ export function StaffAllocationRepeatProrataPage() {
     event.preventDefault();
     try {
       setErrorMessage("");
+      if (studentId.trim().length < 6) {
+        setErrorMessage("Student ID must be at least 6 characters.");
+        return;
+      }
+      if (!subjectId.trim() && !examId.trim()) {
+        setErrorMessage("Provide at least Subject ID or Exam ID.");
+        return;
+      }
+      if (reason.trim().length > 0 && reason.trim().length < 6) {
+        setErrorMessage("Reason must be at least 6 characters when provided.");
+        return;
+      }
+
       await createApplication({
-        studentId,
-        subjectId: subjectId || undefined,
-        examId: examId || undefined,
+        studentId: studentId.trim(),
+        subjectId: subjectId.trim() || undefined,
+        examId: examId.trim() || undefined,
         applicationType,
-        reason: reason || undefined,
+        reason: reason.trim() || undefined,
       });
       setStudentId("");
       setSubjectId("");
@@ -104,10 +139,14 @@ export function StaffAllocationRepeatProrataPage() {
   async function onDecide(applicationId: string, decision: "approved" | "rejected") {
     try {
       setErrorMessage("");
+      if (decisionApproverId.trim().length < 6) {
+        setErrorMessage("Approver ID must be at least 6 characters.");
+        return;
+      }
       await decideApplication(applicationId, {
-        approverId: decisionApproverId,
+        approverId: decisionApproverId.trim(),
         decision,
-        decisionNote: decisionNote || undefined,
+        decisionNote: decisionNote.trim() || undefined,
       });
       await loadData();
     } catch (error) {
@@ -116,43 +155,50 @@ export function StaffAllocationRepeatProrataPage() {
   }
 
   return (
-    <main style={{ maxWidth: 1100, margin: "24px auto", fontFamily: "sans-serif" }}>
-      <h1>Staff Allocation &amp; Repeat/Pro-Rata Management</h1>
-      <p>Manage availability, assignments, and student repeat/pro-rata application decisions.</p>
-      {errorMessage ? <p style={{ color: "crimson" }}>{errorMessage}</p> : null}
+    <main>
+      <section className="page-header">
+        <h1>Staff Allocation &amp; Repeat/Pro-Rata Management</h1>
+        <p>Manage staff availability, assignment constraints, and application approval decisions.</p>
+      </section>
 
-      <section style={{ marginBottom: 24 }}>
+      {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
+
+      <section className="card">
         <h2>Create Staff Availability</h2>
-        <form onSubmit={onCreateAvailability} style={{ display: "grid", gap: 8, maxWidth: 420 }}>
-          <input value={staffId} onChange={(event) => setStaffId(event.target.value)} placeholder="Staff ID" required />
+        <form onSubmit={onCreateAvailability} className="form-grid">
+          <input className="app-input" value={staffId} onChange={(event) => setStaffId(event.target.value)} placeholder="Staff ID" required />
           <input
+            className="app-input"
             type="date"
             value={availableDate}
             onChange={(event) => setAvailableDate(event.target.value)}
             required
           />
-          <input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} required />
-          <input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} required />
-          <button type="submit">Add Availability</button>
+          <input className="app-input" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} required />
+          <input className="app-input" type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} required />
+          <button className="app-button" type="submit">Add Availability</button>
         </form>
       </section>
 
-      <section style={{ marginBottom: 24 }}>
+      <section className="card">
         <h2>Create Staff Assignment</h2>
-        <form onSubmit={onCreateAssignment} style={{ display: "grid", gap: 8, maxWidth: 420 }}>
+        <form onSubmit={onCreateAssignment} className="form-grid">
           <input
+            className="app-input"
             value={examSessionId}
             onChange={(event) => setExamSessionId(event.target.value)}
             placeholder="Exam Session ID"
             required
           />
           <input
+            className="app-input"
             value={assignStaffId}
             onChange={(event) => setAssignStaffId(event.target.value)}
             placeholder="Staff ID"
             required
           />
           <select
+            className="app-select"
             value={roleInSession}
             onChange={(event) =>
               setRoleInSession(event.target.value as "invigilator" | "supervisor" | "LIC" | "support")
@@ -163,51 +209,54 @@ export function StaffAllocationRepeatProrataPage() {
             <option value="LIC">LIC</option>
             <option value="support">support</option>
           </select>
-          <button type="submit">Assign Staff</button>
+          <button className="app-button" type="submit">Assign Staff</button>
         </form>
       </section>
 
-      <section style={{ marginBottom: 24 }}>
+      <section className="card">
         <h2>Create Repeat/Pro-Rata Application</h2>
-        <form onSubmit={onCreateApplication} style={{ display: "grid", gap: 8, maxWidth: 420 }}>
+        <form onSubmit={onCreateApplication} className="form-grid">
           <input
+            className="app-input"
             value={studentId}
             onChange={(event) => setStudentId(event.target.value)}
             placeholder="Student ID"
             required
           />
-          <input value={subjectId} onChange={(event) => setSubjectId(event.target.value)} placeholder="Subject ID (optional)" />
-          <input value={examId} onChange={(event) => setExamId(event.target.value)} placeholder="Exam ID (optional)" />
+          <input className="app-input" value={subjectId} onChange={(event) => setSubjectId(event.target.value)} placeholder="Subject ID (optional)" />
+          <input className="app-input" value={examId} onChange={(event) => setExamId(event.target.value)} placeholder="Exam ID (optional)" />
           <select
+            className="app-select"
             value={applicationType}
             onChange={(event) => setApplicationType(event.target.value as "repeat" | "pro-rata")}
           >
             <option value="repeat">repeat</option>
             <option value="pro-rata">pro-rata</option>
           </select>
-          <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Reason" />
-          <button type="submit">Submit Application</button>
+          <input className="app-input" value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Reason" />
+          <button className="app-button" type="submit">Submit Application</button>
         </form>
       </section>
 
-      <section style={{ marginBottom: 24 }}>
+      <section className="card">
         <h2>Decision Inputs</h2>
-        <div style={{ display: "grid", gap: 8, maxWidth: 420 }}>
+        <div className="form-grid">
           <input
+            className="app-input"
             value={decisionApproverId}
             onChange={(event) => setDecisionApproverId(event.target.value)}
             placeholder="Approver ID"
           />
-          <input value={decisionNote} onChange={(event) => setDecisionNote(event.target.value)} placeholder="Decision Note" />
+          <input className="app-input" value={decisionNote} onChange={(event) => setDecisionNote(event.target.value)} placeholder="Decision Note" />
         </div>
       </section>
 
-      <section style={{ marginBottom: 24 }}>
+      <section className="card">
         <h2>Availability</h2>
         {!availability.length ? (
           <p>No availability entries yet.</p>
         ) : (
-          <table cellPadding={8} style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table className="app-table">
             <thead>
               <tr>
                 <th align="left">Staff ID</th>
@@ -232,12 +281,12 @@ export function StaffAllocationRepeatProrataPage() {
         )}
       </section>
 
-      <section style={{ marginBottom: 24 }}>
+      <section className="card">
         <h2>Assignments</h2>
         {!assignments.length ? (
           <p>No assignments yet.</p>
         ) : (
-          <table cellPadding={8} style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table className="app-table">
             <thead>
               <tr>
                 <th align="left">Exam Session</th>
@@ -260,12 +309,12 @@ export function StaffAllocationRepeatProrataPage() {
         )}
       </section>
 
-      <section>
+      <section className="card">
         <h2>Repeat/Pro-Rata Applications</h2>
         {!applications.length ? (
           <p>No applications yet.</p>
         ) : (
-          <table cellPadding={8} style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table className="app-table">
             <thead>
               <tr>
                 <th align="left">Student</th>
@@ -285,6 +334,7 @@ export function StaffAllocationRepeatProrataPage() {
                       type="button"
                       disabled={item.status !== "pending" || !decisionApproverId}
                       onClick={() => onDecide(item.id, "approved")}
+                      className="app-button"
                     >
                       Approve
                     </button>{" "}
@@ -292,6 +342,7 @@ export function StaffAllocationRepeatProrataPage() {
                       type="button"
                       disabled={item.status !== "pending" || !decisionApproverId}
                       onClick={() => onDecide(item.id, "rejected")}
+                      className="app-button"
                     >
                       Reject
                     </button>

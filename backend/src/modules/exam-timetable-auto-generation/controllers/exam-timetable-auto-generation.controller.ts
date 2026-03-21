@@ -159,3 +159,31 @@ examTimetableAutoGenerationRouter.patch(
     }
   },
 );
+
+examTimetableAutoGenerationRouter.get(
+  "/timetable-runs/:id/ai-insights",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const insights = await service.getTimetableAiInsights(req.params.id);
+      if (!insights) {
+        res.status(404).json({ message: "Timetable run not found" });
+        return;
+      }
+      res.json(insights);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+examTimetableAutoGenerationRouter.post(
+  "/timetable-runs/ai-simulate",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = service.simulateTimetablePlan(req.body);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);

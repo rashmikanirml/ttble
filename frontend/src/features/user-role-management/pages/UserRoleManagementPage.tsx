@@ -43,12 +43,23 @@ export function UserRoleManagementPage() {
   }
 
   return (
-    <main style={{ maxWidth: 960, margin: "24px auto", fontFamily: "sans-serif" }}>
-      <h1>User &amp; Role Management</h1>
-      <p>Create users and manage activation state.</p>
-      {errorMessage ? <p style={{ color: "crimson" }}>{errorMessage}</p> : null}
-      <UserForm onCreate={handleCreate} />
-      <UserTable users={users} onDeactivate={handleDeactivate} />
+    <main>
+      <section className="page-header">
+        <h1>User &amp; Role Management</h1>
+        <p>Create users, assign role type, and manage account activation state.</p>
+      </section>
+
+      {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
+
+      <section className="card">
+        <h2>Create User</h2>
+        <UserForm onCreate={handleCreate} />
+      </section>
+
+      <section className="card">
+        <h2>Users</h2>
+        <UserTable users={users} onDeactivate={handleDeactivate} />
+      </section>
     </main>
   );
 }

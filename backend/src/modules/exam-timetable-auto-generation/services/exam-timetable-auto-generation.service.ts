@@ -4,6 +4,7 @@ import type {
   CreateExamDto,
   CreateSubjectDto,
   GenerateTimetableDto,
+  TimetableSimulationDto,
   UpdateExamDto,
   UpdateExamSessionDto,
   UpdateSubjectDto,
@@ -71,6 +72,19 @@ function addMinutes(baseTime: string, minutesToAdd: number): string {
 
 function toDateString(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+function minutesBetween(start: string, end: string): number {
+  const [startH, startM] = start.split(":").map((part) => Number(part));
+  const [endH, endM] = end.split(":").map((part) => Number(part));
+  return endH * 60 + endM - (startH * 60 + startM);
+}
+
+function inclusiveDays(start: string, end: string): number {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const diff = endDate.getTime() - startDate.getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
 }
 
 export class ExamTimetableAutoGenerationService {
@@ -369,5 +383,150 @@ export class ExamTimetableAutoGenerationService {
     );
 
     return result.rowCount ? mapSession(result.rows[0]) : null;
+  }
+
+  async getTimetableAiInsights(runId: string): Promise<{
+    runId: string;
+    riskScore: number;
+    schedulePressure: "low" | "medium" | "high";
+    kpis: {
+      totalSessions: number;
+      totalDays: number;
+      avgDurationMinutes: number;
+      examsPerDay: number;
+    };
+    recommendations: string[];
+  } | null> {
+    const runResult = await db.query(
+      `select id, date_start, date_end from timetable_runs where id = $1`,
+      [runId],
+    );
+
+    if (!runResult.rowCount) {
+      return null;
+    }
+
+    const sessionsResult = await db.query(
+      `select es.exam_date, es.start_time, es.end_time, e.duration_minutes
+       from exam_sessions es
+       join exams e on e.id = es.exam_id
+       where es.timetable_run_id = $1
+       order by es.exam_date, es.start_time`,
+      [runId],
+    );
+
+    const sessions = sessionsResult.rows;
+    const totalSessions = sessions.length;
+    const totalDays = Math.max(1, inclusiveDays(runResult.rows[0].date_start, runResult.rows[0].date_end));
+    const examsPerDay = Number((totalSessions / totalDays).toFixed(2));
+
+    const durationTotal = sessions.reduce((sum: number, row: any) => sum + Number(row.duration_minutes), 0);
+    const avgDurationMinutes = totalSessions ? Math.round(durationTotal / totalSessions) : 0;
+
+    const sessionsByDay = new Map<string, Array<{ start: string; end: string }>>();
+    for (const row of sessions) {
+      const day = row.exam_date as string;
+      if (!sessionsByDay.has(day)) {
+        sessionsByDay.set(day, []);
+      }
+      sessionsByDay.get(day)!.push({ start: row.start_time, end: row.end_time });
+    }
+
+    let tightTransitionCount = 0;
+    let overloadedDays = 0;
+
+    for (const [, daySessions] of sessionsByDay) {
+      if (daySessions.length >= 4) {
+        overloadedDays += 1;
+      }
+      daySessions.sort((a, b) => a.start.localeCompare(b.start));
+      for (let i = 1; i < daySessions.length; i += 1) {
+        const gap = minutesBetween(daySessions[i - 1].end, daySessions[i].start);
+        if (gap < 20) {
+          tightTransitionCount += 1;
+        }
+      }
+    }
+
+    let riskScore = 20;
+    riskScore += Math.min(35, overloadedDays * 8);
+    riskScore += Math.min(25, tightTransitionCount * 5);
+    if (avgDurationMinutes > 150) {
+      riskScore += 12;
+    }
+    riskScore = Math.max(0, Math.min(100, riskScore));
+
+    const schedulePressure = riskScore >= 70 ? "high" : riskScore >= 45 ? "medium" : "low";
+    const recommendations: string[] = [];
+
+    if (overloadedDays > 0) {
+      recommendations.push("Redistribute sessions to reduce days with 4 or more exams.");
+    }
+    if (tightTransitionCount > 0) {
+      recommendations.push("Increase buffer time between sessions to at least 20 minutes.");
+    }
+    if (avgDurationMinutes > 150) {
+      recommendations.push("Prioritize longer exams in morning slots to reduce fatigue risk.");
+    }
+    if (!recommendations.length) {
+      recommendations.push("Current schedule quality looks healthy. Monitor hall and staff assignment constraints.");
+    }
+
+    return {
+      runId,
+      riskScore,
+      schedulePressure,
+      kpis: {
+        totalSessions,
+        totalDays,
+        avgDurationMinutes,
+        examsPerDay,
+      },
+      recommendations,
+    };
+  }
+
+  simulateTimetablePlan(input: TimetableSimulationDto): {
+    feasible: boolean;
+    confidenceScore: number;
+    requiredDays: number;
+    availableDays: number;
+    schedulePressure: "low" | "medium" | "high";
+    notes: string[];
+  } {
+    const availableDays = Math.max(0, inclusiveDays(input.dateStart, input.dateEnd));
+    const maxPerDay = Math.max(1, input.maxExamsPerDay);
+    const requiredDays = Math.ceil(input.totalExams / maxPerDay);
+    const feasible = requiredDays <= availableDays;
+
+    const ratio = availableDays > 0 ? requiredDays / availableDays : 2;
+    const pressure = ratio > 0.9 ? "high" : ratio > 0.65 ? "medium" : "low";
+
+    let confidenceScore = 95;
+    confidenceScore -= Math.round(Math.max(0, ratio - 0.5) * 70);
+    if (!feasible) {
+      confidenceScore = Math.max(5, confidenceScore - 35);
+    }
+    confidenceScore = Math.max(0, Math.min(100, confidenceScore));
+
+    const notes: string[] = [];
+    if (!feasible) {
+      notes.push("Date range is insufficient for the requested exam volume.");
+    }
+    if (pressure === "high") {
+      notes.push("Schedule pressure is high. Consider extending the date range or raising max exams/day.");
+    }
+    if (pressure === "low") {
+      notes.push("Plan has healthy time buffers and should be easier to optimize.");
+    }
+
+    return {
+      feasible,
+      confidenceScore,
+      requiredDays,
+      availableDays,
+      schedulePressure: pressure,
+      notes,
+    };
   }
 }

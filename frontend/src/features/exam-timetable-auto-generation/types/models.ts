@@ -34,3 +34,25 @@ export interface TimetableGenerationResult {
   };
   sessions: ExamSession[];
 }
+
+export interface TimetableAiInsights {
+  runId: string;
+  riskScore: number;
+  schedulePressure: "low" | "medium" | "high";
+  kpis: {
+    totalSessions: number;
+    totalDays: number;
+    avgDurationMinutes: number;
+    examsPerDay: number;
+  };
+  recommendations: string[];
+}
+
+export interface TimetableSimulationResult {
+  feasible: boolean;
+  confidenceScore: number;
+  requiredDays: number;
+  availableDays: number;
+  schedulePressure: "low" | "medium" | "high";
+  notes: string[];
+}
