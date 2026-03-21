@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { login } from "./features/auth/api/authApi";
 import { DashboardPage } from "./features/dashboard/pages/DashboardPage";
 import { ExamHallResourceManagementPage } from "./features/exam-hall-resource-management/pages/ExamHallResourceManagementPage";
 import { ExamTimetableAutoGenerationPage } from "./features/exam-timetable-auto-generation/pages/ExamTimetableAutoGenerationPage";
 import { StaffAllocationRepeatProrataPage } from "./features/staff-allocation-repeat-prorata/pages/StaffAllocationRepeatProrataPage";
 import { UserRoleManagementPage } from "./features/user-role-management/pages/UserRoleManagementPage";
-import { clearAuthToken, getAuthToken, setAuthToken } from "./lib/auth";
+import { clearAuthToken, getAuthToken, getAuthUser, setAuthToken, setAuthUser } from "./lib/auth";
 
 type NavItem = {
   key: "dashboard" | "users" | "timetable" | "halls" | "staff";
@@ -20,19 +20,43 @@ const navItems: NavItem[] = [
   { key: "staff", label: "Staff & Pro-Rata" },
 ];
 
+const allowedNavByRole: Record<string, Array<NavItem["key"]>> = {
+  admin: ["dashboard", "users", "timetable", "halls", "staff"],
+  staff: ["dashboard", "users", "timetable", "halls", "staff"],
+  student: ["dashboard", "timetable"],
+};
+
 export function App() {
   const [active, setActive] = useState<NavItem["key"]>("dashboard");
   const [email, setEmail] = useState("admin@ttble.local");
   const [password, setPassword] = useState("admin123");
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(getAuthToken()));
+  const [currentRole, setCurrentRole] = useState(getAuthUser()?.role || "");
   const [error, setError] = useState("");
+
+  const visibleNavItems = useMemo(() => {
+    const allowed = allowedNavByRole[currentRole] ?? navItems.map((item) => item.key);
+    return navItems.filter((item) => allowed.includes(item.key));
+  }, [currentRole]);
+
+  useEffect(() => {
+    if (!visibleNavItems.length) {
+      return;
+    }
+    const isActiveAllowed = visibleNavItems.some((item) => item.key === active);
+    if (!isActiveAllowed) {
+      setActive(visibleNavItems[0].key);
+    }
+  }, [active, visibleNavItems]);
 
   async function onLogin() {
     try {
       setError("");
       const result = await login({ email: email.trim(), password: password.trim() });
       setAuthToken(result.token);
+      setAuthUser(result.user);
       setIsAuthenticated(true);
+      setCurrentRole(result.user.role);
       setActive("dashboard");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Login failed");
@@ -42,23 +66,24 @@ export function App() {
   function onLogout() {
     clearAuthToken();
     setIsAuthenticated(false);
+    setCurrentRole("");
   }
 
   const content = useMemo(() => {
     if (active === "dashboard") {
-      return <DashboardPage />;
+      return <DashboardPage currentRole={currentRole} />;
     }
     if (active === "users") {
       return <UserRoleManagementPage />;
     }
     if (active === "timetable") {
-      return <ExamTimetableAutoGenerationPage />;
+      return <ExamTimetableAutoGenerationPage currentRole={currentRole} />;
     }
     if (active === "halls") {
       return <ExamHallResourceManagementPage />;
     }
     return <StaffAllocationRepeatProrataPage />;
-  }, [active]);
+  }, [active, currentRole]);
 
   return (
     <div className="app-shell">
@@ -67,7 +92,7 @@ export function App() {
         {isAuthenticated ? (
           <>
             <nav className="nav-links" aria-label="Primary navigation">
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <button
                   key={item.key}
                   type="button"

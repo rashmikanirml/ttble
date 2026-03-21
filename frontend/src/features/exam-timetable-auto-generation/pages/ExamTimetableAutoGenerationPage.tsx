@@ -22,7 +22,7 @@ import type {
   TimetableSimulationResult,
 } from "../types/models";
 
-export function ExamTimetableAutoGenerationPage() {
+export function ExamTimetableAutoGenerationPage({ currentRole }: { currentRole: string }) {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
   const [sessions, setSessions] = useState<ExamSession[]>([]);
@@ -37,6 +37,9 @@ export function ExamTimetableAutoGenerationPage() {
   const [invigilationExamId, setInvigilationExamId] = useState("");
   const [invigilationMotivation, setInvigilationMotivation] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const canManageTimetable = currentRole === "admin" || currentRole === "staff";
+  const canApplyExam = currentRole === "student";
+  const canApplyInvigilation = currentRole === "staff";
 
   const [subjectCode, setSubjectCode] = useState("");
   const [subjectName, setSubjectName] = useState("");
@@ -79,16 +82,19 @@ export function ExamTimetableAutoGenerationPage() {
   async function loadData() {
     try {
       setErrorMessage("");
-      const [subjectData, examData, examApplicationData, invigilationApplicationData] = await Promise.all([
-        listSubjects(),
-        listExams(),
-        listExamApplications(),
-        listInvigilationApplications(),
-      ]);
+      const [subjectData, examData] = await Promise.all([listSubjects(), listExams()]);
       setSubjects(subjectData);
       setExams(examData);
-      setExamApplications(examApplicationData);
-      setInvigilationApplications(invigilationApplicationData);
+
+      if (canManageTimetable) {
+        const [examApplicationData, invigilationApplicationData] = await Promise.all([
+          listExamApplications(),
+          listInvigilationApplications(),
+        ]);
+        setExamApplications(examApplicationData);
+        setInvigilationApplications(invigilationApplicationData);
+      }
+
       if (!examSubjectId && subjectData.length) {
         setExamSubjectId(subjectData[0].id);
       }
@@ -105,7 +111,7 @@ export function ExamTimetableAutoGenerationPage() {
 
   useEffect(() => {
     void loadData();
-  }, []);
+  }, [canManageTimetable]);
 
   async function onCreateSubject(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -215,11 +221,15 @@ export function ExamTimetableAutoGenerationPage() {
         setErrorMessage("Select an exam to apply.");
         return;
       }
-      await applyForExam({ examId: examApplyId, noticeText: examApplyNotice.trim() || undefined });
+      const created = await applyForExam({ examId: examApplyId, noticeText: examApplyNotice.trim() || undefined });
       setExamApplyNotice("");
       setSuccessMessage("Exam application submitted.");
-      const refreshed = await listExamApplications();
-      setExamApplications(refreshed);
+      if (canManageTimetable) {
+        const refreshed = await listExamApplications();
+        setExamApplications(refreshed);
+      } else {
+        setExamApplications((current) => [created, ...current.filter((item) => item.id !== created.id)]);
+      }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to submit exam application");
     }
@@ -234,14 +244,18 @@ export function ExamTimetableAutoGenerationPage() {
         setErrorMessage("Select an exam for invigilation application.");
         return;
       }
-      await applyForInvigilation({
+      const created = await applyForInvigilation({
         examId: invigilationExamId,
         motivation: invigilationMotivation.trim() || undefined,
       });
       setInvigilationMotivation("");
       setSuccessMessage("Invigilation application submitted.");
-      const refreshed = await listInvigilationApplications();
-      setInvigilationApplications(refreshed);
+      if (canManageTimetable) {
+        const refreshed = await listInvigilationApplications();
+        setInvigilationApplications(refreshed);
+      } else {
+        setInvigilationApplications((current) => [created, ...current.filter((item) => item.id !== created.id)]);
+      }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to submit invigilation application");
     }
@@ -261,7 +275,8 @@ export function ExamTimetableAutoGenerationPage() {
       {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
       {successMessage ? <div className="success-banner">{successMessage}</div> : null}
 
-      <section className="card">
+      {canApplyExam ? (
+        <section className="card">
         <h2>Student Exam Applications</h2>
         <form onSubmit={onApplyForExam} className="form-grid">
           <select className="app-select" value={examApplyId} onChange={(event) => setExamApplyId(event.target.value)} required>
@@ -308,9 +323,11 @@ export function ExamTimetableAutoGenerationPage() {
         ) : (
           <p>No exam applications yet.</p>
         )}
-      </section>
+        </section>
+      ) : null}
 
-      <section className="card">
+      {canApplyInvigilation ? (
+        <section className="card">
         <h2>Lecturer Invigilation Applications</h2>
         <form onSubmit={onApplyForInvigilation} className="form-grid">
           <select
@@ -362,9 +379,11 @@ export function ExamTimetableAutoGenerationPage() {
         ) : (
           <p>No invigilation applications yet.</p>
         )}
-      </section>
+        </section>
+      ) : null}
 
-      <section className="card">
+      {canManageTimetable ? (
+        <section className="card">
         <h2>Create Subject</h2>
         <form onSubmit={onCreateSubject} className="form-grid">
           <input className="app-input" value={subjectCode} onChange={(event) => setSubjectCode(event.target.value)} placeholder="Code" required />
@@ -389,9 +408,11 @@ export function ExamTimetableAutoGenerationPage() {
           />
           <button className="app-button" type="submit">Add Subject</button>
         </form>
-      </section>
+        </section>
+      ) : null}
 
-      <section className="card">
+      {canManageTimetable ? (
+        <section className="card">
         <h2>Create Exam</h2>
         <form onSubmit={onCreateExam} className="form-grid">
           <select className="app-select" value={examSubjectId} onChange={(event) => setExamSubjectId(event.target.value)} required>
@@ -424,9 +445,11 @@ export function ExamTimetableAutoGenerationPage() {
           />
           <button className="app-button" type="submit">Add Exam</button>
         </form>
-      </section>
+        </section>
+      ) : null}
 
-      <section className="card">
+      {canManageTimetable ? (
+        <section className="card">
         <h2>Generate Timetable</h2>
         <form onSubmit={onGenerate} className="form-grid">
           <label>
@@ -456,9 +479,11 @@ export function ExamTimetableAutoGenerationPage() {
             Run AI What-If Simulation
           </button>
         </form>
-      </section>
+        </section>
+      ) : null}
 
-      <section className="card">
+      {canManageTimetable ? (
+        <section className="card">
         <h2>AI Planning Assistant</h2>
         {simulation ? (
           <div>
@@ -495,9 +520,11 @@ export function ExamTimetableAutoGenerationPage() {
         ) : (
           <p>Generate a timetable to receive AI quality insights.</p>
         )}
-      </section>
+        </section>
+      ) : null}
 
-      <section className="card">
+      {canManageTimetable ? (
+        <section className="card">
         <h2>Generated Sessions</h2>
         {runId ? <p>Run ID: {runId}</p> : <p>No generated run yet.</p>}
         {!sessions.length ? (
@@ -529,7 +556,15 @@ export function ExamTimetableAutoGenerationPage() {
             </tbody>
           </table>
         )}
-      </section>
+        </section>
+      ) : null}
+
+      {!canManageTimetable && !canApplyExam && !canApplyInvigilation ? (
+        <section className="card">
+          <h2>Role Access</h2>
+          <p>Your role has limited access in this module.</p>
+        </section>
+      ) : null}
     </main>
   );
 }
