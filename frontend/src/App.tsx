@@ -87,6 +87,18 @@ export function App() {
 
   return (
     <div className="app-shell">
+      <div className="bubble-layer" aria-hidden="true">
+        <span className="bubble" style={{ ["--size" as string]: "72px", ["--left" as string]: "4%", ["--duration" as string]: "20s", ["--delay" as string]: "-2s" }} />
+        <span className="bubble" style={{ ["--size" as string]: "52px", ["--left" as string]: "14%", ["--duration" as string]: "15s", ["--delay" as string]: "-8s" }} />
+        <span className="bubble" style={{ ["--size" as string]: "86px", ["--left" as string]: "24%", ["--duration" as string]: "22s", ["--delay" as string]: "-6s" }} />
+        <span className="bubble" style={{ ["--size" as string]: "42px", ["--left" as string]: "33%", ["--duration" as string]: "14s", ["--delay" as string]: "-1s" }} />
+        <span className="bubble" style={{ ["--size" as string]: "90px", ["--left" as string]: "44%", ["--duration" as string]: "24s", ["--delay" as string]: "-10s" }} />
+        <span className="bubble" style={{ ["--size" as string]: "60px", ["--left" as string]: "58%", ["--duration" as string]: "18s", ["--delay" as string]: "-3s" }} />
+        <span className="bubble" style={{ ["--size" as string]: "74px", ["--left" as string]: "67%", ["--duration" as string]: "20s", ["--delay" as string]: "-12s" }} />
+        <span className="bubble" style={{ ["--size" as string]: "48px", ["--left" as string]: "76%", ["--duration" as string]: "16s", ["--delay" as string]: "-5s" }} />
+        <span className="bubble" style={{ ["--size" as string]: "96px", ["--left" as string]: "86%", ["--duration" as string]: "25s", ["--delay" as string]: "-7s" }} />
+        <span className="bubble" style={{ ["--size" as string]: "56px", ["--left" as string]: "94%", ["--duration" as string]: "17s", ["--delay" as string]: "-11s" }} />
+      </div>
       <header className="top-nav">
         <div className="brand">TTBLE</div>
         {isAuthenticated ? (
