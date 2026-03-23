@@ -43,6 +43,7 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
   const [invigilationExamId, setInvigilationExamId] = useState("");
   const [invigilationMotivation, setInvigilationMotivation] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const canManageTimetable = currentRole === "admin" || currentRole === "staff";
   const canApplyExam = currentRole === "student";
   const canApplyInvigilation = currentRole === "staff";
@@ -65,12 +66,13 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
   const [runStatus, setRunStatus] = useState("");
 
   async function runSimulation() {
+    setFieldErrors({});
     if (!dateStart || !dateEnd) {
-      setErrorMessage("Set date range first to run AI simulation.");
+      setFieldErrors({ dateStart: "Set date range first to run AI simulation.", dateEnd: "Set date range first to run AI simulation." });
       return;
     }
     if (dateStart > dateEnd) {
-      setErrorMessage("Start date cannot be after end date.");
+      setFieldErrors({ dateEnd: "Start date cannot be after end date." });
       return;
     }
     try {
@@ -141,16 +143,17 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
     try {
       setErrorMessage("");
       setSuccessMessage("");
+      setFieldErrors({});
       if (subjectCode.trim().length < 2 || subjectCode.trim().length > 20) {
-        setErrorMessage("Subject code must be between 2 and 20 characters.");
+        setFieldErrors({ subjectCode: "Subject code must be between 2 and 20 characters." });
         return;
       }
       if (subjectName.trim().length < 3) {
-        setErrorMessage("Subject name must be at least 3 characters.");
+        setFieldErrors({ subjectName: "Subject name must be at least 3 characters." });
         return;
       }
       if (yearNo < 1 || semesterNo < 1) {
-        setErrorMessage("Year and semester must be at least 1.");
+        setFieldErrors({ yearNo: "Year and semester must be at least 1.", semesterNo: "Year and semester must be at least 1." });
         return;
       }
 
@@ -168,20 +171,21 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
     try {
       setErrorMessage("");
       setSuccessMessage("");
+      setFieldErrors({});
       if (!examSubjectId) {
-        setErrorMessage("Select a subject before creating an exam.");
+        setFieldErrors({ examSubjectId: "Select a subject before creating an exam." });
         return;
       }
       if (examType.trim().length < 3) {
-        setErrorMessage("Exam type must be at least 3 characters.");
+        setFieldErrors({ examType: "Exam type must be at least 3 characters." });
         return;
       }
       if (durationMinutes < 30 || durationMinutes > 360) {
-        setErrorMessage("Exam duration must be between 30 and 360 minutes.");
+        setFieldErrors({ durationMinutes: "Exam duration must be between 30 and 360 minutes." });
         return;
       }
       if (studentCohort.trim().length < 2) {
-        setErrorMessage("Student cohort must be at least 2 characters.");
+        setFieldErrors({ studentCohort: "Student cohort must be at least 2 characters." });
         return;
       }
 
@@ -202,20 +206,21 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
     try {
       setErrorMessage("");
       setSuccessMessage("");
+      setFieldErrors({});
       if (!dateStart || !dateEnd) {
-        setErrorMessage("Select both start and end dates.");
+        setFieldErrors({ dateStart: "Select both start and end dates.", dateEnd: "Select both start and end dates." });
         return;
       }
       if (dateStart > dateEnd) {
-        setErrorMessage("Start date cannot be after end date.");
+        setFieldErrors({ dateEnd: "Start date cannot be after end date." });
         return;
       }
       if (maxExamsPerDay < 1 || maxExamsPerDay > 8) {
-        setErrorMessage("Max exams per day must be between 1 and 8.");
+        setFieldErrors({ maxExamsPerDay: "Max exams per day must be between 1 and 8." });
         return;
       }
       if (createdBy.trim().length < 6) {
-        setErrorMessage("Created by user ID should be at least 6 characters.");
+        setFieldErrors({ createdBy: "Created by user ID should be at least 6 characters." });
         return;
       }
 
@@ -238,8 +243,9 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
 
   async function onApproveRun() {
     try {
+      setFieldErrors({});
       if (!runId.trim()) {
-        setErrorMessage("Generate a timetable first.");
+        setFieldErrors({ runId: "Generate a timetable first." });
         return;
       }
       const updated = await approveTimetableRun(runId.trim(), workflowNote.trim() || undefined);
@@ -252,8 +258,9 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
 
   async function onPublishRun() {
     try {
+      setFieldErrors({});
       if (!runId.trim()) {
-        setErrorMessage("Generate a timetable first.");
+        setFieldErrors({ runId: "Generate a timetable first." });
         return;
       }
       const updated = await publishTimetableRun(runId.trim());
@@ -269,8 +276,9 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
     try {
       setErrorMessage("");
       setSuccessMessage("");
+      setFieldErrors({});
       if (!examApplyId) {
-        setErrorMessage("Select an exam to apply.");
+        setFieldErrors({ examApplyId: "Select an exam to apply." });
         return;
       }
       const created = await applyForExam({ examId: examApplyId, noticeText: examApplyNotice.trim() || undefined });
@@ -292,8 +300,9 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
     try {
       setErrorMessage("");
       setSuccessMessage("");
+      setFieldErrors({});
       if (!invigilationExamId) {
-        setErrorMessage("Select an exam for invigilation application.");
+        setFieldErrors({ invigilationExamId: "Select an exam for invigilation application." });
         return;
       }
       const created = await applyForInvigilation({
@@ -317,8 +326,9 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
     try {
       setErrorMessage("");
       setSuccessMessage("");
+      setFieldErrors({});
       if (!runId.trim()) {
-        setErrorMessage("Enter or select a timetable run ID first.");
+        setFieldErrors({ runId: "Enter or select a timetable run ID first." });
         return;
       }
 
@@ -351,23 +361,29 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
         <section className="card">
         <h2>Student Exam Applications</h2>
         <form onSubmit={onApplyForExam} className="form-grid">
-          <select className="app-select" value={examApplyId} onChange={(event) => setExamApplyId(event.target.value)} required>
-            <option value="" disabled>
-              Select Exam
-            </option>
-            {exams.map((exam) => (
-              <option key={exam.id} value={exam.id}>
-                {exam.examType} - {exam.studentCohort}
+          <label className="form-field">
+            <span className="field-label">Exam</span>
+            <select className="app-select" value={examApplyId} onChange={(event) => setExamApplyId(event.target.value)} required>
+              <option value="" disabled>
+                Select Exam
               </option>
-            ))}
-          </select>
-          <textarea
-            className="app-input"
-            value={examApplyNotice}
-            onChange={(event) => setExamApplyNotice(event.target.value)}
-            placeholder="Notice/Reason"
-            rows={3}
-          />
+              {exams.map((exam) => (
+                <option key={exam.id} value={exam.id}>
+                  {exam.examType} - {exam.studentCohort}
+                </option>
+              ))}
+            </select>
+            {fieldErrors.examApplyId ? <span className="field-error">{fieldErrors.examApplyId}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Notice/Reason (optional)</span>
+            <textarea
+              className="app-input"
+              value={examApplyNotice}
+              onChange={(event) => setExamApplyNotice(event.target.value)}
+              rows={3}
+            />
+          </label>
           <button className="app-button" type="submit">Apply for Exam</button>
         </form>
         {examApplications.length ? (
@@ -402,28 +418,34 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
         <section className="card">
         <h2>Lecturer Invigilation Applications</h2>
         <form onSubmit={onApplyForInvigilation} className="form-grid">
-          <select
-            className="app-select"
-            value={invigilationExamId}
-            onChange={(event) => setInvigilationExamId(event.target.value)}
-            required
-          >
-            <option value="" disabled>
-              Select Exam
-            </option>
-            {exams.map((exam) => (
-              <option key={exam.id} value={exam.id}>
-                {exam.examType} - {exam.studentCohort}
+          <label className="form-field">
+            <span className="field-label">Exam</span>
+            <select
+              className="app-select"
+              value={invigilationExamId}
+              onChange={(event) => setInvigilationExamId(event.target.value)}
+              required
+            >
+              <option value="" disabled>
+                Select Exam
               </option>
-            ))}
-          </select>
-          <textarea
-            className="app-input"
-            value={invigilationMotivation}
-            onChange={(event) => setInvigilationMotivation(event.target.value)}
-            placeholder="Motivation"
-            rows={3}
-          />
+              {exams.map((exam) => (
+                <option key={exam.id} value={exam.id}>
+                  {exam.examType} - {exam.studentCohort}
+                </option>
+              ))}
+            </select>
+            {fieldErrors.invigilationExamId ? <span className="field-error">{fieldErrors.invigilationExamId}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Motivation (optional)</span>
+            <textarea
+              className="app-input"
+              value={invigilationMotivation}
+              onChange={(event) => setInvigilationMotivation(event.target.value)}
+              rows={3}
+            />
+          </label>
           <button className="app-button" type="submit">Apply for Invigilation</button>
         </form>
         {invigilationApplications.length ? (
@@ -458,26 +480,40 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
         <section className="card">
         <h2>Create Subject</h2>
         <form onSubmit={onCreateSubject} className="form-grid">
-          <input className="app-input" value={subjectCode} onChange={(event) => setSubjectCode(event.target.value)} placeholder="Code" required />
-          <input className="app-input" value={subjectName} onChange={(event) => setSubjectName(event.target.value)} placeholder="Name" required />
-          <input
-            className="app-input"
-            type="number"
-            value={yearNo}
-            min={1}
-            onChange={(event) => setYearNo(Number(event.target.value))}
-            placeholder="Year"
-            required
-          />
-          <input
-            className="app-input"
-            type="number"
-            value={semesterNo}
-            min={1}
-            onChange={(event) => setSemesterNo(Number(event.target.value))}
-            placeholder="Semester"
-            required
-          />
+          <label className="form-field">
+            <span className="field-label">Subject Code</span>
+            <input className="app-input" value={subjectCode} onChange={(event) => setSubjectCode(event.target.value)} required />
+            {fieldErrors.subjectCode ? <span className="field-error">{fieldErrors.subjectCode}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Subject Name</span>
+            <input className="app-input" value={subjectName} onChange={(event) => setSubjectName(event.target.value)} required />
+            {fieldErrors.subjectName ? <span className="field-error">{fieldErrors.subjectName}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Year</span>
+            <input
+              className="app-input"
+              type="number"
+              value={yearNo}
+              min={1}
+              onChange={(event) => setYearNo(Number(event.target.value))}
+              required
+            />
+            {fieldErrors.yearNo ? <span className="field-error">{fieldErrors.yearNo}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Semester</span>
+            <input
+              className="app-input"
+              type="number"
+              value={semesterNo}
+              min={1}
+              onChange={(event) => setSemesterNo(Number(event.target.value))}
+              required
+            />
+            {fieldErrors.semesterNo ? <span className="field-error">{fieldErrors.semesterNo}</span> : null}
+          </label>
           <button className="app-button" type="submit">Add Subject</button>
         </form>
         </section>
@@ -487,18 +523,28 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
         <section className="card">
           <h2>Workflow Status Management</h2>
           <div className="form-grid">
-            <input className="app-input" value={runId} onChange={(event) => setRunId(event.target.value)} placeholder="Timetable Run ID" />
+            <label className="form-field">
+              <span className="field-label">Timetable Run ID</span>
+              <input className="app-input" value={runId} onChange={(event) => setRunId(event.target.value)} />
+              {fieldErrors.runId ? <span className="field-error">{fieldErrors.runId}</span> : null}
+            </label>
             {timetableRuns.length ? (
-              <select className="app-select" value={runId} onChange={(event) => setRunId(event.target.value)}>
-                <option value="">Select existing timetable run</option>
-                {timetableRuns.map((run) => (
-                  <option key={run.id} value={run.id}>
-                    {run.id} | {run.dateStart} to {run.dateEnd} | {run.status}
-                  </option>
-                ))}
-              </select>
+              <label className="form-field">
+                <span className="field-label">Existing Timetable Runs</span>
+                <select className="app-select" value={runId} onChange={(event) => setRunId(event.target.value)}>
+                  <option value="">Select existing timetable run</option>
+                  {timetableRuns.map((run) => (
+                    <option key={run.id} value={run.id}>
+                      {run.id} | {run.dateStart} to {run.dateEnd} | {run.status}
+                    </option>
+                  ))}
+                </select>
+              </label>
             ) : null}
-            <input className="app-input" value={workflowNote} onChange={(event) => setWorkflowNote(event.target.value)} placeholder="Approval note (optional)" />
+            <label className="form-field">
+              <span className="field-label">Approval Note (optional)</span>
+              <input className="app-input" value={workflowNote} onChange={(event) => setWorkflowNote(event.target.value)} />
+            </label>
             <p>Current run status: <strong>{runStatus || "unknown"}</strong></p>
             <div className="inline-row">
               <button className="app-button" type="button" onClick={() => void onLoadRun()}>Load Run</button>
@@ -513,34 +559,48 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
         <section className="card">
         <h2>Create Exam</h2>
         <form onSubmit={onCreateExam} className="form-grid">
-          <select className="app-select" value={examSubjectId} onChange={(event) => setExamSubjectId(event.target.value)} required>
-            <option value="" disabled>
-              Select Subject
-            </option>
-            {subjects.map((subject) => (
-              <option value={subject.id} key={subject.id}>
-                {subject.code} - {subject.name}
+          <label className="form-field">
+            <span className="field-label">Subject</span>
+            <select className="app-select" value={examSubjectId} onChange={(event) => setExamSubjectId(event.target.value)} required>
+              <option value="" disabled>
+                Select Subject
               </option>
-            ))}
-          </select>
-          <input className="app-input" value={examType} onChange={(event) => setExamType(event.target.value)} placeholder="Exam Type" required />
-          <input
-            className="app-input"
-            type="number"
-            value={durationMinutes}
-            min={30}
-            step={5}
-            onChange={(event) => setDurationMinutes(Number(event.target.value))}
-            placeholder="Duration"
-            required
-          />
-          <input
-            className="app-input"
-            value={studentCohort}
-            onChange={(event) => setStudentCohort(event.target.value)}
-            placeholder="Student Cohort"
-            required
-          />
+              {subjects.map((subject) => (
+                <option value={subject.id} key={subject.id}>
+                  {subject.code} - {subject.name}
+                </option>
+              ))}
+            </select>
+            {fieldErrors.examSubjectId ? <span className="field-error">{fieldErrors.examSubjectId}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Exam Type</span>
+            <input className="app-input" value={examType} onChange={(event) => setExamType(event.target.value)} required />
+            {fieldErrors.examType ? <span className="field-error">{fieldErrors.examType}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Duration (minutes)</span>
+            <input
+              className="app-input"
+              type="number"
+              value={durationMinutes}
+              min={30}
+              step={5}
+              onChange={(event) => setDurationMinutes(Number(event.target.value))}
+              required
+            />
+            {fieldErrors.durationMinutes ? <span className="field-error">{fieldErrors.durationMinutes}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Student Cohort</span>
+            <input
+              className="app-input"
+              value={studentCohort}
+              onChange={(event) => setStudentCohort(event.target.value)}
+              required
+            />
+            {fieldErrors.studentCohort ? <span className="field-error">{fieldErrors.studentCohort}</span> : null}
+          </label>
           <button className="app-button" type="submit">Add Exam</button>
         </form>
         </section>
@@ -550,20 +610,23 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
         <section className="card">
         <h2>Generate Timetable</h2>
         <form onSubmit={onGenerate} className="form-grid">
-          <label>
-            Start Date
+          <label className="form-field">
+            <span className="field-label">Start Date</span>
             <input className="app-input" type="date" value={dateStart} onChange={(event) => setDateStart(event.target.value)} required />
+            {fieldErrors.dateStart ? <span className="field-error">{fieldErrors.dateStart}</span> : null}
           </label>
-          <label>
-            End Date
+          <label className="form-field">
+            <span className="field-label">End Date</span>
             <input className="app-input" type="date" value={dateEnd} onChange={(event) => setDateEnd(event.target.value)} required />
+            {fieldErrors.dateEnd ? <span className="field-error">{fieldErrors.dateEnd}</span> : null}
           </label>
-          <label>
-            Created By (User ID)
+          <label className="form-field">
+            <span className="field-label">Created By (User ID)</span>
             <input className="app-input" value={createdBy} onChange={(event) => setCreatedBy(event.target.value)} required />
+            {fieldErrors.createdBy ? <span className="field-error">{fieldErrors.createdBy}</span> : null}
           </label>
-          <label>
-            Max Exams Per Day
+          <label className="form-field">
+            <span className="field-label">Max Exams Per Day</span>
             <input
               className="app-input"
               type="number"
@@ -571,6 +634,7 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
               min={1}
               onChange={(event) => setMaxExamsPerDay(Number(event.target.value))}
             />
+            {fieldErrors.maxExamsPerDay ? <span className="field-error">{fieldErrors.maxExamsPerDay}</span> : null}
           </label>
           <button className="app-button" type="submit">Generate</button>
           <button className="app-button" type="button" onClick={runSimulation}>
