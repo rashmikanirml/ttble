@@ -85,8 +85,8 @@ export function App() {
     if (active === "halls") {
       return <ExamHallResourceManagementPage />;
     }
-    return <StaffAllocationRepeatProrataPage />;
-  }, [active, currentRole]);
+    return <StaffAllocationRepeatProrataPage currentRole={currentRole} currentUserId={currentUserId} />;
+  }, [active, currentRole, currentUserId]);
 
   return (
     <div className="app-shell">

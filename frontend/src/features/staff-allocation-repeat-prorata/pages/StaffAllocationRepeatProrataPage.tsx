@@ -14,7 +14,7 @@ import type {
   StaffAvailability,
 } from "../types/models";
 
-export function StaffAllocationRepeatProrataPage() {
+export function StaffAllocationRepeatProrataPage({ currentRole, currentUserId }: { currentRole: string; currentUserId: string }) {
   const [availability, setAvailability] = useState<StaffAvailability[]>([]);
   const [assignments, setAssignments] = useState<StaffAssignment[]>([]);
   const [applications, setApplications] = useState<RepeatProRataApplication[]>([]);
@@ -53,6 +53,16 @@ export function StaffAllocationRepeatProrataPage() {
   useEffect(() => {
     void loadData();
   }, []);
+
+  useEffect(() => {
+    if (currentUserId) {
+      setDecisionApproverId(currentUserId);
+      if (currentRole === "staff") {
+        setStaffId(currentUserId);
+        setAssignStaffId(currentUserId);
+      }
+    }
+  }, [currentRole, currentUserId]);
 
   async function onCreateAvailability(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -139,12 +149,13 @@ export function StaffAllocationRepeatProrataPage() {
   async function onDecide(applicationId: string, decision: "approved" | "rejected") {
     try {
       setErrorMessage("");
-      if (decisionApproverId.trim().length < 6) {
-        setErrorMessage("Approver ID must be at least 6 characters.");
+      const approverId = (decisionApproverId.trim() || currentUserId.trim());
+      if (approverId.length < 8) {
+        setErrorMessage("Approver ID must be at least 8 characters.");
         return;
       }
       await decideApplication(applicationId, {
-        approverId: decisionApproverId.trim(),
+        approverId,
         decision,
         decisionNote: decisionNote.trim() || undefined,
       });
@@ -248,6 +259,7 @@ export function StaffAllocationRepeatProrataPage() {
             placeholder="Approver ID"
           />
           <input className="app-input" value={decisionNote} onChange={(event) => setDecisionNote(event.target.value)} placeholder="Decision Note" />
+          <p>Approvals are submitted as the current logged-in user by default.</p>
         </div>
       </section>
 
@@ -332,7 +344,7 @@ export function StaffAllocationRepeatProrataPage() {
                   <td>
                     <button
                       type="button"
-                      disabled={item.status !== "pending" || !decisionApproverId}
+                      disabled={item.status !== "pending"}
                       onClick={() => onDecide(item.id, "approved")}
                       className="app-button"
                     >
@@ -340,7 +352,7 @@ export function StaffAllocationRepeatProrataPage() {
                     </button>{" "}
                     <button
                       type="button"
-                      disabled={item.status !== "pending" || !decisionApproverId}
+                      disabled={item.status !== "pending"}
                       onClick={() => onDecide(item.id, "rejected")}
                       className="app-button"
                     >
