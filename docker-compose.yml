@@ -1,0 +1,41 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ttble
+      POSTGRES_USER: ttble
+      POSTGRES_PASSWORD: ttble
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      PORT: 4000
+      JWT_SECRET: local-dev-secret
+      DATABASE_URL: postgresql://ttble:ttble@postgres:5432/ttble?sslmode=disable
+      ENABLE_REMINDER_SCHEDULER: "false"
+      NTFY_BASE_URL: https://ntfy.sh
+      NTFY_TOPIC_PREFIX: ttble-local
+    ports:
+      - "4000:4000"
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+
+volumes:
+  pgdata:

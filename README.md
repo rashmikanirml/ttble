@@ -17,6 +17,65 @@ Reference files:
 - `.env.example`
 - `backend/src/config/database.ts`
 
+## Professional Enhancements Implemented
+
+### Core system layer
+
+- JWT authentication with RBAC checks
+- Password hashing with bcrypt (legacy password auto-upgrade on next login)
+- Audit logging for all mutating API calls (`audit_logs`)
+- In-app notifications (`in_app_notifications`) and external notification logging
+- Structured error handling with typed API error responses
+
+### Reporting and analytics
+
+- Timetable report endpoint
+- Hall utilization analytics endpoint
+- Staff workload analytics endpoint
+- Export timetable reports to Excel (`.xlsx`) and PDF
+
+### Workflow and status management
+
+- Timetable run lifecycle: `draft -> approved -> published -> archived`
+- Approval flow with `timetable_approvals`
+- Publish flow enforces approval first
+- Business rules enforce no direct edits to published timetable sessions
+
+### Configuration / rules engine
+
+- Dynamic settings via `system_settings`
+- Built-in scheduling rules:
+	- `maxExamsPerDay`
+	- `slotGapMinutes`
+	- `minHallCapacity`
+- Admin endpoint to update rules at runtime
+
+### Data integrity
+
+- Additional indexes and unique constraints for bookings/assignments
+- Added check constraints for status values and time/duration validity
+- Existing transactional generation preserved for consistency
+
+### Testing strategy
+
+- Unit test baseline added for workflow/business rules
+- Run with: `npm --prefix backend run test:unit`
+
+### Deployment / DevOps
+
+- Optional Docker setup:
+	- `backend/Dockerfile`
+	- `frontend/Dockerfile`
+	- `docker-compose.yml`
+
+## Useful Commands
+
+- Run full stack dev: `npm run dev`
+- Apply schema migration: `npm --prefix backend run migrate`
+- Seed demo data: `npm --prefix backend run seed`
+- Build backend: `npm --prefix backend run build`
+- Run backend unit tests: `npm --prefix backend run test:unit`
+
 ## Component folders
 
 Frontend features:
