@@ -57,6 +57,14 @@ export async function generateTimetable(payload: {
   });
 }
 
+export async function listTimetableRuns(limit = 25): Promise<TimetableGenerationResult["run"][]> {
+  return apiFetch<TimetableGenerationResult["run"][]>(`/timetable-runs?limit=${limit}`);
+}
+
+export async function getTimetableRunDetails(runId: string): Promise<TimetableGenerationResult> {
+  return apiFetch<TimetableGenerationResult>(`/timetable-runs/${runId}`);
+}
+
 export async function getTimetableAiInsights(runId: string): Promise<TimetableAiInsights> {
   return apiFetch<TimetableAiInsights>(`/timetable-runs/${runId}/ai-insights`);
 }

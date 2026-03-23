@@ -293,6 +293,23 @@ examTimetableAutoGenerationRouter.post(
 );
 
 examTimetableAutoGenerationRouter.get(
+  "/timetable-runs",
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const limit =
+        typeof req.query.limit === "string" && Number.isFinite(Number(req.query.limit))
+          ? Number(req.query.limit)
+          : undefined;
+      const runs = await service.listTimetableRuns(limit);
+      res.json(runs);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+examTimetableAutoGenerationRouter.get(
   "/timetable-runs/:id",
   requireAuth,
   async (req: Request, res: Response, next: NextFunction) => {

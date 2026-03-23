@@ -5,11 +5,13 @@ import {
   applyForInvigilation,
   createExam,
   createSubject,
+  getTimetableRunDetails,
   getTimetableAiInsights,
   generateTimetable,
   listExamApplications,
   listExams,
   listInvigilationApplications,
+  listTimetableRuns,
   listSubjects,
   publishTimetableRun,
   simulateTimetablePlan,
@@ -21,6 +23,7 @@ import type {
   InvigilationApplication,
   Subject,
   TimetableAiInsights,
+  TimetableGenerationResult,
   TimetableSimulationResult,
 } from "../types/models";
 
@@ -29,6 +32,7 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
   const [exams, setExams] = useState<Exam[]>([]);
   const [sessions, setSessions] = useState<ExamSession[]>([]);
   const [runId, setRunId] = useState<string>("");
+  const [timetableRuns, setTimetableRuns] = useState<Array<TimetableGenerationResult["run"]>>([]);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [insights, setInsights] = useState<TimetableAiInsights | null>(null);
   const [simulation, setSimulation] = useState<TimetableSimulationResult | null>(null);
@@ -86,9 +90,10 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
   async function loadData() {
     try {
       setErrorMessage("");
-      const [subjectData, examData] = await Promise.all([listSubjects(), listExams()]);
+      const [subjectData, examData, runData] = await Promise.all([listSubjects(), listExams(), listTimetableRuns(30)]);
       setSubjects(subjectData);
       setExams(examData);
+      setTimetableRuns(runData);
 
       if (canManageTimetable) {
         const [examApplicationData, invigilationApplicationData] = await Promise.all([
@@ -107,6 +112,16 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
       }
       if (!invigilationExamId && examData.length) {
         setInvigilationExamId(examData[0].id);
+      }
+
+      if (!runId && runData.length) {
+        const latest = runData[0];
+        const details = await getTimetableRunDetails(latest.id);
+        setRunId(latest.id);
+        setRunStatus(latest.status);
+        setSessions(details.sessions);
+        const aiInsights = await getTimetableAiInsights(latest.id);
+        setInsights(aiInsights);
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to load data");
@@ -298,6 +313,26 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
     }
   }
 
+  async function onLoadRun() {
+    try {
+      setErrorMessage("");
+      setSuccessMessage("");
+      if (!runId.trim()) {
+        setErrorMessage("Enter or select a timetable run ID first.");
+        return;
+      }
+
+      const details = await getTimetableRunDetails(runId.trim());
+      setRunStatus(details.run.status);
+      setSessions(details.sessions);
+      const aiInsights = await getTimetableAiInsights(runId.trim());
+      setInsights(aiInsights);
+      setSuccessMessage(`Loaded timetable run ${runId.trim()} with ${details.sessions.length} sessions.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to fetch timetable run");
+    }
+  }
+
   const examIndex = useMemo(() => {
     return new Map(exams.map((exam) => [exam.id, exam]));
   }, [exams]);
@@ -453,9 +488,20 @@ export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: 
           <h2>Workflow Status Management</h2>
           <div className="form-grid">
             <input className="app-input" value={runId} onChange={(event) => setRunId(event.target.value)} placeholder="Timetable Run ID" />
+            {timetableRuns.length ? (
+              <select className="app-select" value={runId} onChange={(event) => setRunId(event.target.value)}>
+                <option value="">Select existing timetable run</option>
+                {timetableRuns.map((run) => (
+                  <option key={run.id} value={run.id}>
+                    {run.id} | {run.dateStart} to {run.dateEnd} | {run.status}
+                  </option>
+                ))}
+              </select>
+            ) : null}
             <input className="app-input" value={workflowNote} onChange={(event) => setWorkflowNote(event.target.value)} placeholder="Approval note (optional)" />
             <p>Current run status: <strong>{runStatus || "unknown"}</strong></p>
             <div className="inline-row">
+              <button className="app-button" type="button" onClick={() => void onLoadRun()}>Load Run</button>
               <button className="app-button" type="button" onClick={() => void onApproveRun()}>Approve Run</button>
               <button className="app-button" type="button" onClick={() => void onPublishRun()}>Publish Run</button>
             </div>

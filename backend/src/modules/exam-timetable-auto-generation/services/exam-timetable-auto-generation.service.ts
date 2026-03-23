@@ -134,6 +134,19 @@ function inclusiveDays(start: string, end: string): number {
 export class ExamTimetableAutoGenerationService {
   private readonly settingsService = new SystemSettingsService();
 
+  async listTimetableRuns(limit = 25): Promise<TimetableRun[]> {
+    const safeLimit = Math.max(1, Math.min(limit, 100));
+    const result = await db.query(
+      `select id, date_start, date_end, rules_used, created_by, status, created_at
+       from timetable_runs
+       order by created_at desc
+       limit $1`,
+      [safeLimit],
+    );
+
+    return result.rows.map(mapRun);
+  }
+
   async createSubject(input: CreateSubjectDto): Promise<Subject> {
     const result = await db.query(
       `insert into subjects (id, code, name, year_no, semester_no)
