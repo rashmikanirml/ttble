@@ -24,3 +24,16 @@ export interface RepeatProRataApplication {
   reason: string | null;
   status: "pending" | "approved" | "rejected" | "withdrawn";
 }
+
+export interface StaffCalendarItem {
+  assignmentId: string;
+  examSessionId: string;
+  roleInSession: "invigilator" | "supervisor" | "LIC" | "support";
+  assignmentStatus: "assigned" | "confirmed" | "cancelled";
+  examDate: string;
+  startTime: string;
+  endTime: string;
+  subjectCode: string;
+  subjectName: string;
+  hallName: string | null;
+}

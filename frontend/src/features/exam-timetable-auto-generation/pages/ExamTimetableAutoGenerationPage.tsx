@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
+  approveTimetableRun,
   applyForExam,
   applyForInvigilation,
   createExam,
@@ -10,6 +11,7 @@ import {
   listExams,
   listInvigilationApplications,
   listSubjects,
+  publishTimetableRun,
   simulateTimetablePlan,
 } from "../api/examTimetableApi";
 import type {
@@ -22,7 +24,7 @@ import type {
   TimetableSimulationResult,
 } from "../types/models";
 
-export function ExamTimetableAutoGenerationPage({ currentRole }: { currentRole: string }) {
+export function ExamTimetableAutoGenerationPage({ currentRole, currentUserId }: { currentRole: string; currentUserId: string }) {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
   const [sessions, setSessions] = useState<ExamSession[]>([]);
@@ -54,7 +56,9 @@ export function ExamTimetableAutoGenerationPage({ currentRole }: { currentRole: 
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
   const [maxExamsPerDay, setMaxExamsPerDay] = useState(3);
-  const [createdBy, setCreatedBy] = useState("");
+  const [createdBy, setCreatedBy] = useState(currentUserId || "");
+  const [workflowNote, setWorkflowNote] = useState("");
+  const [runStatus, setRunStatus] = useState("");
 
   async function runSimulation() {
     if (!dateStart || !dateEnd) {
@@ -112,6 +116,10 @@ export function ExamTimetableAutoGenerationPage({ currentRole }: { currentRole: 
   useEffect(() => {
     void loadData();
   }, [canManageTimetable]);
+
+  useEffect(() => {
+    setCreatedBy(currentUserId || "");
+  }, [currentUserId]);
 
   async function onCreateSubject(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -203,12 +211,41 @@ export function ExamTimetableAutoGenerationPage({ currentRole }: { currentRole: 
         maxExamsPerDay,
       });
       setRunId(generated.run.id);
+      setRunStatus(generated.run.status);
       setSessions(generated.sessions);
       const aiInsights = await getTimetableAiInsights(generated.run.id);
       setInsights(aiInsights);
       setSuccessMessage("Timetable generated successfully.");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to generate timetable");
+    }
+  }
+
+  async function onApproveRun() {
+    try {
+      if (!runId.trim()) {
+        setErrorMessage("Generate a timetable first.");
+        return;
+      }
+      const updated = await approveTimetableRun(runId.trim(), workflowNote.trim() || undefined);
+      setRunStatus(updated.status);
+      setSuccessMessage(`Run ${updated.id} moved to ${updated.status}.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to approve timetable run");
+    }
+  }
+
+  async function onPublishRun() {
+    try {
+      if (!runId.trim()) {
+        setErrorMessage("Generate a timetable first.");
+        return;
+      }
+      const updated = await publishTimetableRun(runId.trim());
+      setRunStatus(updated.status);
+      setSuccessMessage(`Run ${updated.id} moved to ${updated.status}.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to publish timetable run");
     }
   }
 
@@ -408,6 +445,21 @@ export function ExamTimetableAutoGenerationPage({ currentRole }: { currentRole: 
           />
           <button className="app-button" type="submit">Add Subject</button>
         </form>
+        </section>
+      ) : null}
+
+      {canManageTimetable ? (
+        <section className="card">
+          <h2>Workflow Status Management</h2>
+          <div className="form-grid">
+            <input className="app-input" value={runId} onChange={(event) => setRunId(event.target.value)} placeholder="Timetable Run ID" />
+            <input className="app-input" value={workflowNote} onChange={(event) => setWorkflowNote(event.target.value)} placeholder="Approval note (optional)" />
+            <p>Current run status: <strong>{runStatus || "unknown"}</strong></p>
+            <div className="inline-row">
+              <button className="app-button" type="button" onClick={() => void onApproveRun()}>Approve Run</button>
+              <button className="app-button" type="button" onClick={() => void onPublishRun()}>Publish Run</button>
+            </div>
+          </div>
         </section>
       ) : null}
 

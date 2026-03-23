@@ -31,6 +31,7 @@ export function App() {
   const [email, setEmail] = useState("admin@ttble.local");
   const [password, setPassword] = useState("admin123");
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(getAuthToken()));
+  const [currentUserId, setCurrentUserId] = useState(getAuthUser()?.id || "");
   const [currentRole, setCurrentRole] = useState(getAuthUser()?.role || "");
   const [error, setError] = useState("");
 
@@ -56,6 +57,7 @@ export function App() {
       setAuthToken(result.token);
       setAuthUser(result.user);
       setIsAuthenticated(true);
+      setCurrentUserId(result.user.id);
       setCurrentRole(result.user.role);
       setActive("dashboard");
     } catch (e) {
@@ -66,6 +68,7 @@ export function App() {
   function onLogout() {
     clearAuthToken();
     setIsAuthenticated(false);
+    setCurrentUserId("");
     setCurrentRole("");
   }
 
@@ -77,7 +80,7 @@ export function App() {
       return <UserRoleManagementPage />;
     }
     if (active === "timetable") {
-      return <ExamTimetableAutoGenerationPage currentRole={currentRole} />;
+      return <ExamTimetableAutoGenerationPage currentRole={currentRole} currentUserId={currentUserId} />;
     }
     if (active === "halls") {
       return <ExamHallResourceManagementPage />;

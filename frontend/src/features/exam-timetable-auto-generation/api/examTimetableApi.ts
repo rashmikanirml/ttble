@@ -129,3 +129,16 @@ export async function sendTimetableReminders(runId: string, hoursBefore = 24): P
     body: JSON.stringify({ hoursBefore }),
   });
 }
+
+export async function approveTimetableRun(runId: string, note?: string): Promise<TimetableGenerationResult["run"]> {
+  return apiFetch<TimetableGenerationResult["run"]>(`/timetable-runs/${runId}/approve`, {
+    method: "POST",
+    body: JSON.stringify({ note }),
+  });
+}
+
+export async function publishTimetableRun(runId: string): Promise<TimetableGenerationResult["run"]> {
+  return apiFetch<TimetableGenerationResult["run"]>(`/timetable-runs/${runId}/publish`, {
+    method: "POST",
+  });
+}

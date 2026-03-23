@@ -1,5 +1,6 @@
 import type {
   RepeatProRataApplication,
+  StaffCalendarItem,
   StaffAssignment,
   StaffAvailability,
 } from "../types/models";
@@ -63,4 +64,16 @@ export async function decideApplication(
     method: "PATCH",
     body: JSON.stringify(payload),
   });
+}
+
+export async function getMyStaffCalendar(from?: string, to?: string): Promise<StaffCalendarItem[]> {
+  const params = new URLSearchParams();
+  if (from) {
+    params.set("from", from);
+  }
+  if (to) {
+    params.set("to", to);
+  }
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiFetch<StaffCalendarItem[]>(`/staff-calendar/mine${suffix}`);
 }
