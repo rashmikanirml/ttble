@@ -37,6 +37,7 @@ export function StaffAllocationRepeatProrataPage({ currentRole, currentUserId }:
 
   const [decisionApproverId, setDecisionApproverId] = useState("");
   const [decisionNote, setDecisionNote] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   async function loadData() {
     try {
@@ -68,16 +69,17 @@ export function StaffAllocationRepeatProrataPage({ currentRole, currentUserId }:
     event.preventDefault();
     try {
       setErrorMessage("");
+      setFieldErrors({});
       if (staffId.trim().length < 6) {
-        setErrorMessage("Staff ID must be at least 6 characters.");
+        setFieldErrors({ staffId: "Staff ID must be at least 6 characters." });
         return;
       }
       if (!availableDate) {
-        setErrorMessage("Pick an availability date.");
+        setFieldErrors({ availableDate: "Pick an availability date." });
         return;
       }
       if (startTime >= endTime) {
-        setErrorMessage("Availability start time must be earlier than end time.");
+        setFieldErrors({ endTime: "Availability start time must be earlier than end time." });
         return;
       }
 
@@ -94,12 +96,13 @@ export function StaffAllocationRepeatProrataPage({ currentRole, currentUserId }:
     event.preventDefault();
     try {
       setErrorMessage("");
+      setFieldErrors({});
       if (examSessionId.trim().length < 8) {
-        setErrorMessage("Exam Session ID must be at least 8 characters.");
+        setFieldErrors({ examSessionId: "Exam Session ID must be at least 8 characters." });
         return;
       }
       if (assignStaffId.trim().length < 6) {
-        setErrorMessage("Staff ID must be at least 6 characters.");
+        setFieldErrors({ assignStaffId: "Staff ID must be at least 6 characters." });
         return;
       }
 
@@ -116,16 +119,17 @@ export function StaffAllocationRepeatProrataPage({ currentRole, currentUserId }:
     event.preventDefault();
     try {
       setErrorMessage("");
+      setFieldErrors({});
       if (studentId.trim().length < 6) {
-        setErrorMessage("Student ID must be at least 6 characters.");
+        setFieldErrors({ studentId: "Student ID must be at least 6 characters." });
         return;
       }
       if (!subjectId.trim() && !examId.trim()) {
-        setErrorMessage("Provide at least Subject ID or Exam ID.");
+        setFieldErrors({ subjectId: "Provide at least Subject ID or Exam ID.", examId: "Provide at least Subject ID or Exam ID." });
         return;
       }
       if (reason.trim().length > 0 && reason.trim().length < 6) {
-        setErrorMessage("Reason must be at least 6 characters when provided.");
+        setFieldErrors({ reason: "Reason must be at least 6 characters when provided." });
         return;
       }
 
@@ -149,9 +153,10 @@ export function StaffAllocationRepeatProrataPage({ currentRole, currentUserId }:
   async function onDecide(applicationId: string, decision: "approved" | "rejected") {
     try {
       setErrorMessage("");
+      setFieldErrors({});
       const approverId = (decisionApproverId.trim() || currentUserId.trim());
       if (approverId.length < 8) {
-        setErrorMessage("Approver ID must be at least 8 characters.");
+        setFieldErrors({ decisionApproverId: "Approver ID must be at least 8 characters." });
         return;
       }
       await decideApplication(applicationId, {
@@ -177,16 +182,31 @@ export function StaffAllocationRepeatProrataPage({ currentRole, currentUserId }:
       <section className="card">
         <h2>Create Staff Availability</h2>
         <form onSubmit={onCreateAvailability} className="form-grid">
-          <input className="app-input" value={staffId} onChange={(event) => setStaffId(event.target.value)} placeholder="Staff ID" required />
-          <input
-            className="app-input"
-            type="date"
-            value={availableDate}
-            onChange={(event) => setAvailableDate(event.target.value)}
-            required
-          />
-          <input className="app-input" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} required />
-          <input className="app-input" type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} required />
+          <label className="form-field">
+            <span className="field-label">Staff ID</span>
+            <input className="app-input" value={staffId} onChange={(event) => setStaffId(event.target.value)} required />
+            {fieldErrors.staffId ? <span className="field-error">{fieldErrors.staffId}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Available Date</span>
+            <input
+              className="app-input"
+              type="date"
+              value={availableDate}
+              onChange={(event) => setAvailableDate(event.target.value)}
+              required
+            />
+            {fieldErrors.availableDate ? <span className="field-error">{fieldErrors.availableDate}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Start Time</span>
+            <input className="app-input" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} required />
+          </label>
+          <label className="form-field">
+            <span className="field-label">End Time</span>
+            <input className="app-input" type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} required />
+            {fieldErrors.endTime ? <span className="field-error">{fieldErrors.endTime}</span> : null}
+          </label>
           <button className="app-button" type="submit">Add Availability</button>
         </form>
       </section>
@@ -194,32 +214,41 @@ export function StaffAllocationRepeatProrataPage({ currentRole, currentUserId }:
       <section className="card">
         <h2>Create Staff Assignment</h2>
         <form onSubmit={onCreateAssignment} className="form-grid">
-          <input
-            className="app-input"
-            value={examSessionId}
-            onChange={(event) => setExamSessionId(event.target.value)}
-            placeholder="Exam Session ID"
-            required
-          />
-          <input
-            className="app-input"
-            value={assignStaffId}
-            onChange={(event) => setAssignStaffId(event.target.value)}
-            placeholder="Staff ID"
-            required
-          />
-          <select
-            className="app-select"
-            value={roleInSession}
-            onChange={(event) =>
-              setRoleInSession(event.target.value as "invigilator" | "supervisor" | "LIC" | "support")
-            }
-          >
-            <option value="invigilator">invigilator</option>
-            <option value="supervisor">supervisor</option>
-            <option value="LIC">LIC</option>
-            <option value="support">support</option>
-          </select>
+          <label className="form-field">
+            <span className="field-label">Exam Session ID</span>
+            <input
+              className="app-input"
+              value={examSessionId}
+              onChange={(event) => setExamSessionId(event.target.value)}
+              required
+            />
+            {fieldErrors.examSessionId ? <span className="field-error">{fieldErrors.examSessionId}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Staff ID</span>
+            <input
+              className="app-input"
+              value={assignStaffId}
+              onChange={(event) => setAssignStaffId(event.target.value)}
+              required
+            />
+            {fieldErrors.assignStaffId ? <span className="field-error">{fieldErrors.assignStaffId}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Role In Session</span>
+            <select
+              className="app-select"
+              value={roleInSession}
+              onChange={(event) =>
+                setRoleInSession(event.target.value as "invigilator" | "supervisor" | "LIC" | "support")
+              }
+            >
+              <option value="invigilator">invigilator</option>
+              <option value="supervisor">supervisor</option>
+              <option value="LIC">LIC</option>
+              <option value="support">support</option>
+            </select>
+          </label>
           <button className="app-button" type="submit">Assign Staff</button>
         </form>
       </section>
@@ -227,24 +256,42 @@ export function StaffAllocationRepeatProrataPage({ currentRole, currentUserId }:
       <section className="card">
         <h2>Create Repeat/Pro-Rata Application</h2>
         <form onSubmit={onCreateApplication} className="form-grid">
-          <input
-            className="app-input"
-            value={studentId}
-            onChange={(event) => setStudentId(event.target.value)}
-            placeholder="Student ID"
-            required
-          />
-          <input className="app-input" value={subjectId} onChange={(event) => setSubjectId(event.target.value)} placeholder="Subject ID (optional)" />
-          <input className="app-input" value={examId} onChange={(event) => setExamId(event.target.value)} placeholder="Exam ID (optional)" />
-          <select
-            className="app-select"
-            value={applicationType}
-            onChange={(event) => setApplicationType(event.target.value as "repeat" | "pro-rata")}
-          >
-            <option value="repeat">repeat</option>
-            <option value="pro-rata">pro-rata</option>
-          </select>
-          <input className="app-input" value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Reason" />
+          <label className="form-field">
+            <span className="field-label">Student ID</span>
+            <input
+              className="app-input"
+              value={studentId}
+              onChange={(event) => setStudentId(event.target.value)}
+              required
+            />
+            {fieldErrors.studentId ? <span className="field-error">{fieldErrors.studentId}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Subject ID (optional)</span>
+            <input className="app-input" value={subjectId} onChange={(event) => setSubjectId(event.target.value)} />
+            {fieldErrors.subjectId ? <span className="field-error">{fieldErrors.subjectId}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Exam ID (optional)</span>
+            <input className="app-input" value={examId} onChange={(event) => setExamId(event.target.value)} />
+            {fieldErrors.examId ? <span className="field-error">{fieldErrors.examId}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Application Type</span>
+            <select
+              className="app-select"
+              value={applicationType}
+              onChange={(event) => setApplicationType(event.target.value as "repeat" | "pro-rata")}
+            >
+              <option value="repeat">repeat</option>
+              <option value="pro-rata">pro-rata</option>
+            </select>
+          </label>
+          <label className="form-field">
+            <span className="field-label">Reason (optional)</span>
+            <input className="app-input" value={reason} onChange={(event) => setReason(event.target.value)} />
+            {fieldErrors.reason ? <span className="field-error">{fieldErrors.reason}</span> : null}
+          </label>
           <button className="app-button" type="submit">Submit Application</button>
         </form>
       </section>
@@ -252,13 +299,19 @@ export function StaffAllocationRepeatProrataPage({ currentRole, currentUserId }:
       <section className="card">
         <h2>Decision Inputs</h2>
         <div className="form-grid">
-          <input
-            className="app-input"
-            value={decisionApproverId}
-            onChange={(event) => setDecisionApproverId(event.target.value)}
-            placeholder="Approver ID"
-          />
-          <input className="app-input" value={decisionNote} onChange={(event) => setDecisionNote(event.target.value)} placeholder="Decision Note" />
+          <label className="form-field">
+            <span className="field-label">Approver ID</span>
+            <input
+              className="app-input"
+              value={decisionApproverId}
+              onChange={(event) => setDecisionApproverId(event.target.value)}
+            />
+            {fieldErrors.decisionApproverId ? <span className="field-error">{fieldErrors.decisionApproverId}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Decision Note (optional)</span>
+            <input className="app-input" value={decisionNote} onChange={(event) => setDecisionNote(event.target.value)} />
+          </label>
           <p>Approvals are submitted as the current logged-in user by default.</p>
         </div>
       </section>
