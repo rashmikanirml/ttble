@@ -34,6 +34,7 @@ export function App() {
   const [currentUserId, setCurrentUserId] = useState(getAuthUser()?.id || "");
   const [currentRole, setCurrentRole] = useState(getAuthUser()?.role || "");
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const visibleNavItems = useMemo(() => {
     const allowed = allowedNavByRole[currentRole] ?? navItems.map((item) => item.key);
@@ -53,6 +54,15 @@ export function App() {
   async function onLogin() {
     try {
       setError("");
+      setFieldErrors({});
+      if (!email.trim()) {
+        setFieldErrors({ email: "Email is required." });
+        return;
+      }
+      if (!password.trim()) {
+        setFieldErrors({ password: "Password is required." });
+        return;
+      }
       const result = await login({ email: email.trim(), password: password.trim() });
       setAuthToken(result.token);
       setAuthUser(result.user);
@@ -122,8 +132,16 @@ export function App() {
           </>
         ) : (
           <div className="auth-inline">
-            <input className="app-input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-            <input className="app-input" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" type="password" />
+            <label className="form-field">
+              <span className="field-label">Email</span>
+              <input className="app-input" value={email} onChange={(e) => setEmail(e.target.value)} />
+              {fieldErrors.email ? <span className="field-error">{fieldErrors.email}</span> : null}
+            </label>
+            <label className="form-field">
+              <span className="field-label">Password</span>
+              <input className="app-input" value={password} onChange={(e) => setPassword(e.target.value)} type="password" />
+              {fieldErrors.password ? <span className="field-error">{fieldErrors.password}</span> : null}
+            </label>
             <button type="button" className="app-button" onClick={onLogin}>Sign In</button>
           </div>
         )}
