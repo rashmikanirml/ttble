@@ -27,6 +27,7 @@ export function ExamHallResourceManagementPage() {
 
   const [bookingHallId, setBookingHallId] = useState("");
   const [examSessionId, setExamSessionId] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   async function loadData() {
     try {
@@ -54,20 +55,21 @@ export function ExamHallResourceManagementPage() {
     event.preventDefault();
     try {
       setErrorMessage("");
+      setFieldErrors({});
       if (code.trim().length < 2 || code.trim().length > 20) {
-        setErrorMessage("Hall code must be between 2 and 20 characters.");
+        setFieldErrors({ code: "Hall code must be between 2 and 20 characters." });
         return;
       }
       if (name.trim().length < 3) {
-        setErrorMessage("Hall name must be at least 3 characters.");
+        setFieldErrors({ name: "Hall name must be at least 3 characters." });
         return;
       }
       if (location.trim().length < 3) {
-        setErrorMessage("Location must be at least 3 characters.");
+        setFieldErrors({ location: "Location must be at least 3 characters." });
         return;
       }
       if (capacity < 1 || capacity > 5000) {
-        setErrorMessage("Capacity must be between 1 and 5000.");
+        setFieldErrors({ capacity: "Capacity must be between 1 and 5000." });
         return;
       }
 
@@ -86,8 +88,9 @@ export function ExamHallResourceManagementPage() {
     event.preventDefault();
     try {
       setErrorMessage("");
+      setFieldErrors({});
       if (!facilityHallId) {
-        setErrorMessage("Select a hall before updating facilities.");
+        setFieldErrors({ facilityHallId: "Select a hall before updating facilities." });
         return;
       }
       await upsertHallFacility(facilityHallId, {
@@ -106,12 +109,13 @@ export function ExamHallResourceManagementPage() {
     event.preventDefault();
     try {
       setErrorMessage("");
+      setFieldErrors({});
       if (!bookingHallId) {
-        setErrorMessage("Select a hall for booking.");
+        setFieldErrors({ bookingHallId: "Select a hall for booking." });
         return;
       }
       if (examSessionId.trim().length < 8) {
-        setErrorMessage("Exam Session ID must be at least 8 characters.");
+        setFieldErrors({ examSessionId: "Exam Session ID must be at least 8 characters." });
         return;
       }
 
@@ -145,18 +149,33 @@ export function ExamHallResourceManagementPage() {
       <section className="card">
         <h2>Create Hall</h2>
         <form onSubmit={onCreateHall} className="form-grid">
-          <input className="app-input" value={code} onChange={(event) => setCode(event.target.value)} placeholder="Code" required />
-          <input className="app-input" value={name} onChange={(event) => setName(event.target.value)} placeholder="Name" required />
-          <input className="app-input" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Location" required />
-          <input
-            className="app-input"
-            type="number"
-            value={capacity}
-            min={1}
-            onChange={(event) => setCapacity(Number(event.target.value))}
-            placeholder="Capacity"
-            required
-          />
+          <label className="form-field">
+            <span className="field-label">Code</span>
+            <input className="app-input" value={code} onChange={(event) => setCode(event.target.value)} required />
+            {fieldErrors.code ? <span className="field-error">{fieldErrors.code}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Name</span>
+            <input className="app-input" value={name} onChange={(event) => setName(event.target.value)} required />
+            {fieldErrors.name ? <span className="field-error">{fieldErrors.name}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Location</span>
+            <input className="app-input" value={location} onChange={(event) => setLocation(event.target.value)} required />
+            {fieldErrors.location ? <span className="field-error">{fieldErrors.location}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Capacity</span>
+            <input
+              className="app-input"
+              type="number"
+              value={capacity}
+              min={1}
+              onChange={(event) => setCapacity(Number(event.target.value))}
+              required
+            />
+            {fieldErrors.capacity ? <span className="field-error">{fieldErrors.capacity}</span> : null}
+          </label>
           <button className="app-button" type="submit">Add Hall</button>
         </form>
       </section>
@@ -164,36 +183,44 @@ export function ExamHallResourceManagementPage() {
       <section className="card">
         <h2>Update Hall Facilities</h2>
         <form onSubmit={onUpdateFacility} className="form-grid">
-          <select className="app-select" value={facilityHallId} onChange={(event) => setFacilityHallId(event.target.value)} required>
-            {halls.map((hall) => (
-              <option key={hall.id} value={hall.id}>
-                {hall.code} - {hall.name}
-              </option>
-            ))}
-          </select>
-          <label className="inline-row">
-            <input type="checkbox" checked={hasAc} onChange={(event) => setHasAc(event.target.checked)} /> Has AC
+          <label className="form-field">
+            <span className="field-label">Hall</span>
+            <select className="app-select" value={facilityHallId} onChange={(event) => setFacilityHallId(event.target.value)} required>
+              {halls.map((hall) => (
+                <option key={hall.id} value={hall.id}>
+                  {hall.code} - {hall.name}
+                </option>
+              ))}
+            </select>
+            {fieldErrors.facilityHallId ? <span className="field-error">{fieldErrors.facilityHallId}</span> : null}
           </label>
-          <label className="inline-row">
+          <label className="form-field">
+            <span className="field-label">Has AC</span>
+            <input type="checkbox" checked={hasAc} onChange={(event) => setHasAc(event.target.checked)} />
+          </label>
+          <label className="form-field">
+            <span className="field-label">Has Computers</span>
             <input
               type="checkbox"
               checked={hasComputers}
               onChange={(event) => setHasComputers(event.target.checked)}
-            /> Has Computers
+            />
           </label>
-          <label className="inline-row">
+          <label className="form-field">
+            <span className="field-label">Accessibility Support</span>
             <input
               type="checkbox"
               checked={hasAccessibilitySupport}
               onChange={(event) => setHasAccessibilitySupport(event.target.checked)}
-            /> Accessibility Support
+            />
           </label>
-          <label className="inline-row">
+          <label className="form-field">
+            <span className="field-label">Special Needs Support</span>
             <input
               type="checkbox"
               checked={hasSpecialNeedsSupport}
               onChange={(event) => setHasSpecialNeedsSupport(event.target.checked)}
-            /> Special Needs Support
+            />
           </label>
           <button className="app-button" type="submit">Save Facilities</button>
         </form>
@@ -202,20 +229,27 @@ export function ExamHallResourceManagementPage() {
       <section className="card">
         <h2>Create Hall Booking</h2>
         <form onSubmit={onCreateBooking} className="form-grid">
-          <select className="app-select" value={bookingHallId} onChange={(event) => setBookingHallId(event.target.value)} required>
-            {halls.filter((hall) => hall.status === "active").map((hall) => (
-              <option key={hall.id} value={hall.id}>
-                {hall.code} - {hall.name}
-              </option>
-            ))}
-          </select>
-          <input
-            className="app-input"
-            value={examSessionId}
-            onChange={(event) => setExamSessionId(event.target.value)}
-            placeholder="Exam Session ID"
-            required
-          />
+          <label className="form-field">
+            <span className="field-label">Hall</span>
+            <select className="app-select" value={bookingHallId} onChange={(event) => setBookingHallId(event.target.value)} required>
+              {halls.filter((hall) => hall.status === "active").map((hall) => (
+                <option key={hall.id} value={hall.id}>
+                  {hall.code} - {hall.name}
+                </option>
+              ))}
+            </select>
+            {fieldErrors.bookingHallId ? <span className="field-error">{fieldErrors.bookingHallId}</span> : null}
+          </label>
+          <label className="form-field">
+            <span className="field-label">Exam Session ID</span>
+            <input
+              className="app-input"
+              value={examSessionId}
+              onChange={(event) => setExamSessionId(event.target.value)}
+              required
+            />
+            {fieldErrors.examSessionId ? <span className="field-error">{fieldErrors.examSessionId}</span> : null}
+          </label>
           <button className="app-button" type="submit">Book Hall</button>
         </form>
       </section>
