@@ -343,6 +343,35 @@ examTimetableAutoGenerationRouter.get(
 );
 
 examTimetableAutoGenerationRouter.post(
+  "/timetable-runs/:id/approve",
+  requireAuth,
+  requireRole(["admin", "staff"]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const authReq = req as AuthRequest;
+      const run = await service.approveTimetableRun(req.params.id, authReq.auth!.userId, req.body?.note);
+      res.json(run);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+examTimetableAutoGenerationRouter.post(
+  "/timetable-runs/:id/publish",
+  requireAuth,
+  requireRole(["admin"]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const run = await service.publishTimetableRun(req.params.id);
+      res.json(run);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+examTimetableAutoGenerationRouter.post(
   "/timetable-runs/ai-simulate",
   requireAuth,
   requireRole(["admin", "staff"]),

@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { db } from "../../../config/db.js";
+import { badRequest, conflict, notFound } from "../../../lib/errors.js";
+import { canTransitionTimetableStatus, TimetableStatus } from "../../../lib/workflow-rules.js";
+import { SystemSettingsService } from "../../../services/system-settings.service.js";
 import type {
   CreateExamStudentApplicationDto,
   CreateExamDto,
@@ -129,6 +132,8 @@ function inclusiveDays(start: string, end: string): number {
 }
 
 export class ExamTimetableAutoGenerationService {
+  private readonly settingsService = new SystemSettingsService();
+
   async createSubject(input: CreateSubjectDto): Promise<Subject> {
     const result = await db.query(
       `insert into subjects (id, code, name, year_no, semester_no)
@@ -394,7 +399,8 @@ export class ExamTimetableAutoGenerationService {
     );
 
     const runId = randomUUID();
-    const maxExamsPerDay = input.maxExamsPerDay ?? 3;
+    const maxExamsPerDay =
+      input.maxExamsPerDay ?? (await this.settingsService.getNumber("maxExamsPerDay", 3));
     const startTime = input.startTime ?? "09:00";
 
     const client = await db.connect();
@@ -403,7 +409,7 @@ export class ExamTimetableAutoGenerationService {
 
       const runResult = await client.query(
         `insert into timetable_runs (id, date_start, date_end, rules_used, created_by, status)
-         values ($1, $2, $3, $4::jsonb, $5, 'active')
+         values ($1, $2, $3, $4::jsonb, $5, 'draft')
          returning id, date_start, date_end, rules_used, created_by, status, created_at`,
         [
           runId,
@@ -474,8 +480,11 @@ export class ExamTimetableAutoGenerationService {
     input: GenerateAdvancedTimetableDto,
   ): Promise<{ run: TimetableRun; sessions: ExamSession[]; unassignedInvigilationExamIds: string[] }> {
     const startTime = input.startTime ?? "09:00";
-    const maxExamsPerDay = Math.max(1, input.maxExamsPerDay ?? 3);
-    const slotGapMinutes = Math.max(0, input.slotGapMinutes ?? 20);
+    const configuredMaxExams = await this.settingsService.getNumber("maxExamsPerDay", 3);
+    const configuredSlotGap = await this.settingsService.getNumber("slotGapMinutes", 20);
+    const minHallCapacity = await this.settingsService.getNumber("minHallCapacity", 20);
+    const maxExamsPerDay = Math.max(1, input.maxExamsPerDay ?? configuredMaxExams);
+    const slotGapMinutes = Math.max(0, input.slotGapMinutes ?? configuredSlotGap);
     const slotStrideMinutes = 180 + slotGapMinutes;
 
     const approvedExamApplications = await db.query(
@@ -490,7 +499,8 @@ export class ExamTimetableAutoGenerationService {
     }
 
     const hallResult = await db.query(
-      `select id, capacity from halls where status = 'active' order by capacity asc`,
+      `select id, capacity from halls where status = 'active' and capacity >= $1 order by capacity asc`,
+      [minHallCapacity],
     );
     if (!hallResult.rowCount) {
       throw new Error("No active halls are available for timetable generation.");
@@ -592,13 +602,13 @@ export class ExamTimetableAutoGenerationService {
       const runId = randomUUID();
       const runResult = await client.query(
         `insert into timetable_runs (id, date_start, date_end, rules_used, created_by, status)
-         values ($1, $2, $3, $4::jsonb, $5, 'active')
+         values ($1, $2, $3, $4::jsonb, $5, 'draft')
          returning id, date_start, date_end, rules_used, created_by, status, created_at`,
         [
           runId,
           input.dateStart,
           input.dateEnd,
-          JSON.stringify({ mode: "advanced", startTime, maxExamsPerDay, slotGapMinutes }),
+          JSON.stringify({ mode: "advanced", startTime, maxExamsPerDay, slotGapMinutes, minHallCapacity }),
           input.createdBy,
         ],
       );
@@ -813,6 +823,15 @@ export class ExamTimetableAutoGenerationService {
       [randomUUID(), kind, recipient, entityKey, JSON.stringify(payload), externalRef.slice(0, 250)],
     );
 
+    const userResult = await db.query(`select id from users where lower(email) = lower($1) limit 1`, [recipient]);
+    if (userResult.rowCount) {
+      await db.query(
+        `insert into in_app_notifications (id, user_id, kind, title, message, entity_key, payload_json)
+         values ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+        [randomUUID(), userResult.rows[0].id, kind, title, message, entityKey, JSON.stringify(payload)],
+      );
+    }
+
     return { sent: true, externalRef };
   }
 
@@ -1015,6 +1034,23 @@ export class ExamTimetableAutoGenerationService {
   }
 
   async updateExamSession(id: string, input: UpdateExamSessionDto): Promise<ExamSession | null> {
+    const current = await db.query(
+      `select id, timetable_run_id, exam_id, hall_id, exam_date, start_time, end_time, status, created_at, updated_at
+       from exam_sessions where id = $1`,
+      [id],
+    );
+
+    if (!current.rowCount) {
+      return null;
+    }
+
+    const currentSession = current.rows[0] as any;
+    const runResult = await db.query(`select status from timetable_runs where id = $1`, [currentSession.timetable_run_id]);
+    const runStatus = runResult.rows[0]?.status as string | undefined;
+    if (runStatus === "published") {
+      throw conflict("Published timetable sessions cannot be edited directly");
+    }
+
     const fields: string[] = [];
     const values: Array<string | null> = [];
 
@@ -1044,12 +1080,34 @@ export class ExamTimetableAutoGenerationService {
     }
 
     if (!fields.length) {
-      const current = await db.query(
-        `select id, timetable_run_id, exam_id, hall_id, exam_date, start_time, end_time, status, created_at, updated_at
-         from exam_sessions where id = $1`,
-        [id],
+      return mapSession(currentSession);
+    }
+
+    const nextExamDate = (input.examDate ?? currentSession.exam_date) as string;
+    const nextStartTime = (input.startTime ?? currentSession.start_time) as string;
+    const nextEndTime = (input.endTime ?? currentSession.end_time) as string;
+    const nextHallId = (input.hallId ?? currentSession.hall_id) as string | null;
+
+    if (nextEndTime <= nextStartTime) {
+      throw badRequest("endTime must be greater than startTime");
+    }
+
+    if (nextHallId) {
+      const clash = await db.query(
+        `select id
+         from exam_sessions
+         where id <> $1
+           and hall_id = $2
+           and exam_date = $3
+           and status <> 'cancelled'
+           and not (end_time <= $4 or start_time >= $5)
+         limit 1`,
+        [id, nextHallId, nextExamDate, nextStartTime, nextEndTime],
       );
-      return current.rowCount ? mapSession(current.rows[0]) : null;
+
+      if (clash.rowCount) {
+        throw conflict("Hall is already occupied for the selected time slot");
+      }
     }
 
     fields.push("updated_at = now()");
@@ -1064,6 +1122,76 @@ export class ExamTimetableAutoGenerationService {
     );
 
     return result.rowCount ? mapSession(result.rows[0]) : null;
+  }
+
+  async approveTimetableRun(runId: string, approverId: string, note?: string): Promise<TimetableRun> {
+    const run = await db.query(
+      `select id, date_start, date_end, rules_used, created_by, status, created_at
+       from timetable_runs
+       where id = $1`,
+      [runId],
+    );
+
+    if (!run.rowCount) {
+      throw notFound("Timetable run not found");
+    }
+
+    const status = run.rows[0].status as TimetableStatus;
+    if (!canTransitionTimetableStatus(status, "approved")) {
+      throw conflict("Only draft timetable runs can be approved");
+    }
+
+    await db.query(
+      `insert into timetable_approvals (id, timetable_run_id, approver_id, decision, note)
+       values ($1, $2, $3, 'approved', $4)
+       on conflict (timetable_run_id, approver_id)
+       do update set decision = 'approved', note = excluded.note, created_at = now()`,
+      [randomUUID(), runId, approverId, note ?? null],
+    );
+
+    const result = await db.query(
+      `update timetable_runs
+       set status = 'approved'
+       where id = $1
+       returning id, date_start, date_end, rules_used, created_by, status, created_at`,
+      [runId],
+    );
+
+    return mapRun(result.rows[0]);
+  }
+
+  async publishTimetableRun(runId: string): Promise<TimetableRun> {
+    const run = await db.query(
+      `select id, date_start, date_end, rules_used, created_by, status, created_at
+       from timetable_runs where id = $1`,
+      [runId],
+    );
+
+    if (!run.rowCount) {
+      throw notFound("Timetable run not found");
+    }
+
+    const currentStatus = run.rows[0].status as TimetableStatus;
+    if (!canTransitionTimetableStatus(currentStatus, "published")) {
+      throw conflict("Timetable must be approved before publishing");
+    }
+
+    const result = await db.query(
+      `update timetable_runs
+       set status = 'published'
+       where id = $1
+       returning id, date_start, date_end, rules_used, created_by, status, created_at`,
+      [runId],
+    );
+
+    await db.query(
+      `update exam_sessions
+       set status = 'published', updated_at = now()
+       where timetable_run_id = $1 and status <> 'cancelled'`,
+      [runId],
+    );
+
+    return mapRun(result.rows[0]);
   }
 
   async getTimetableAiInsights(runId: string): Promise<{
