@@ -217,6 +217,22 @@ main {
   max-width: 470px;
 }
 
+.form-field {
+  display: grid;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #1a577a;
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 0.8rem;
+}
+
 .app-input,
 .app-select {
   width: 100%;
