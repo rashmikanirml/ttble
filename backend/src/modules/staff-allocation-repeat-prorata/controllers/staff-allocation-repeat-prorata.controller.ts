@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { requireAuth, requireRole } from "../../../middleware/auth.js";
+import { AuthRequest, requireAuth, requireRole } from "../../../middleware/auth.js";
 import { validateBody, validators } from "../../../middleware/validation.js";
 import { StaffAllocationRepeatProrataService } from "../services/staff-allocation-repeat-prorata.service.js";
 
@@ -33,6 +33,23 @@ staffAllocationRepeatProrataRouter.get(
     try {
       const staffId = typeof req.query.staffId === "string" ? req.query.staffId : undefined;
       const list = await service.listAvailability(staffId);
+      res.json(list);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+staffAllocationRepeatProrataRouter.get(
+  "/staff-calendar/mine",
+  requireAuth,
+  requireRole(["staff", "admin"]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const authReq = req as AuthRequest;
+      const from = typeof req.query.from === "string" ? req.query.from : undefined;
+      const to = typeof req.query.to === "string" ? req.query.to : undefined;
+      const list = await service.getStaffCalendar(authReq.auth!.userId, from, to);
       res.json(list);
     } catch (error) {
       next(error);

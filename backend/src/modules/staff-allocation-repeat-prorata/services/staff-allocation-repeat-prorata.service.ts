@@ -66,6 +66,73 @@ function mapApproval(row: any): Approval {
 }
 
 export class StaffAllocationRepeatProrataService {
+  async getStaffCalendar(staffId: string, from?: string, to?: string): Promise<
+    Array<{
+      assignmentId: string;
+      examSessionId: string;
+      roleInSession: string;
+      assignmentStatus: string;
+      examDate: string;
+      startTime: string;
+      endTime: string;
+      subjectCode: string;
+      subjectName: string;
+      hallName: string | null;
+    }>
+  > {
+    const values: string[] = [staffId];
+    const dateConditions: string[] = [];
+
+    if (from) {
+      values.push(from);
+      dateConditions.push(`es.exam_date >= $${values.length}`);
+    }
+
+    if (to) {
+      values.push(to);
+      dateConditions.push(`es.exam_date <= $${values.length}`);
+    }
+
+    const dateFilter = dateConditions.length ? `and ${dateConditions.join(" and ")}` : "";
+
+    const result = await db.query(
+      `select
+         sa.id as assignment_id,
+         sa.exam_session_id,
+         sa.role_in_session,
+         sa.status as assignment_status,
+         es.exam_date,
+         es.start_time,
+         es.end_time,
+         s.code as subject_code,
+         s.name as subject_name,
+         h.name as hall_name
+       from staff_assignments sa
+       join exam_sessions es on es.id = sa.exam_session_id
+       join exams e on e.id = es.exam_id
+       join subjects s on s.id = e.subject_id
+       left join halls h on h.id = es.hall_id
+       where sa.staff_id = $1
+         and sa.status <> 'cancelled'
+         ${dateFilter}
+       order by es.exam_date, es.start_time`,
+      values,
+    );
+
+    return result.rows.map((row: any) => ({
+      assignmentId: row.assignment_id,
+      examSessionId: row.exam_session_id,
+      roleInSession: row.role_in_session,
+      assignmentStatus: row.assignment_status,
+      examDate: String(row.exam_date).slice(0, 10),
+      startTime: row.start_time,
+      endTime: row.end_time,
+      subjectCode: row.subject_code,
+      subjectName: row.subject_name,
+      hallName: row.hall_name,
+    }));
+  }
+
   async createAvailability(input: CreateStaffAvailabilityDto): Promise<StaffAvailability> {
     const overlap = await db.query(
       `select id

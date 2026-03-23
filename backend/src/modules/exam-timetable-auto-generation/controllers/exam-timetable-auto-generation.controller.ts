@@ -23,11 +23,13 @@ examTimetableAutoGenerationRouter.post(
 examTimetableAutoGenerationRouter.get(
   "/exam-applications",
   requireAuth,
-  requireRole(["admin", "staff"]),
+  requireRole(["admin", "staff", "student"]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const status = typeof req.query.status === "string" ? req.query.status : undefined;
-      const applications = await service.listStudentExamApplications(status);
+      const authReq = req as AuthRequest;
+      const studentScope = authReq.auth?.role === "student" ? authReq.auth.userId : undefined;
+      const applications = await service.listStudentExamApplications(status, studentScope);
       res.json(applications);
     } catch (error) {
       next(error);

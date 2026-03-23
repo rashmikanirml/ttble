@@ -301,13 +301,18 @@ export class ExamTimetableAutoGenerationService {
     return mapExamStudentApplication(result.rows[0]);
   }
 
-  async listStudentExamApplications(status?: string): Promise<ExamStudentApplication[]> {
+  async listStudentExamApplications(status?: string, studentId?: string): Promise<ExamStudentApplication[]> {
     const values: string[] = [];
-    let where = "";
+    const conditions: string[] = [];
     if (status) {
       values.push(status);
-      where = `where status = $${values.length}`;
+      conditions.push(`status = $${values.length}`);
     }
+    if (studentId) {
+      values.push(studentId);
+      conditions.push(`student_id = $${values.length}`);
+    }
+    const where = conditions.length ? `where ${conditions.join(" and ")}` : "";
 
     const result = await db.query(
       `select id, exam_id, student_id, status, notice_text, created_at, updated_at
