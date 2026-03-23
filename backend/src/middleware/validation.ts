@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import { badRequest } from "../lib/errors.js";
 
 type Validator<T> = (value: unknown, body: Record<string, unknown>) => T;
 
@@ -68,7 +69,7 @@ export function validateBody(schema: BodySchema) {
       next();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Invalid request body";
-      res.status(400).json({ message });
+      next(badRequest(message));
     }
   };
 }

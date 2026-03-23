@@ -1,6 +1,8 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { signAuthToken } from "../auth/jwt.js";
 import { db } from "../config/db.js";
+import { unauthorized } from "../lib/errors.js";
+import { hashPassword, shouldUpgradePasswordHash, verifyPassword } from "../lib/security.js";
 import { validateBody, validators } from "../middleware/validation.js";
 
 export const authRouter = Router();
@@ -23,19 +25,22 @@ authRouter.post(
       );
 
       if (!result.rowCount) {
-        res.status(401).json({ message: "Invalid credentials" });
-        return;
+        throw unauthorized("Invalid credentials");
       }
 
       const user = result.rows[0];
       if (user.status !== "active") {
-        res.status(403).json({ message: "User account is inactive" });
-        return;
+        throw unauthorized("User account is inactive");
       }
 
-      if (user.password_hash !== password) {
-        res.status(401).json({ message: "Invalid credentials" });
-        return;
+      const passwordValid = await verifyPassword(password, user.password_hash);
+      if (!passwordValid) {
+        throw unauthorized("Invalid credentials");
+      }
+
+      if (shouldUpgradePasswordHash(user.password_hash)) {
+        const hashedPassword = await hashPassword(password);
+        await db.query(`update users set password_hash = $1, updated_at = now() where id = $2`, [hashedPassword, user.id]);
       }
 
       const token = signAuthToken({ userId: user.id, role: user.role, email: user.email });

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { db } from "../../../config/db.js";
+import { hashPassword } from "../../../lib/security.js";
 import type {
   CreateUserDto,
   UpdateUserDto,
@@ -61,11 +62,12 @@ export class UserRoleManagementService {
 
   async createUser(input: CreateUserDto): Promise<User> {
     const id = randomUUID();
+    const passwordHash = await hashPassword(input.passwordHash);
     const result = await db.query(
       `insert into users (id, full_name, email, password_hash, role, status)
        values ($1, $2, $3, $4, $5, 'active')
        returning id, full_name, email, role, status, created_at, updated_at`,
-      [id, input.fullName, input.email.toLowerCase(), input.passwordHash, input.role],
+      [id, input.fullName, input.email.toLowerCase(), passwordHash, input.role],
     );
 
     return toUser(result.rows[0]);
@@ -93,6 +95,12 @@ export class UserRoleManagementService {
     if (input.status !== undefined) {
       values.push(input.status);
       fields.push(`status = $${values.length}`);
+    }
+
+    if ((input as UpdateUserDto & { passwordHash?: string }).passwordHash !== undefined) {
+      const hashed = await hashPassword((input as UpdateUserDto & { passwordHash?: string }).passwordHash as string);
+      values.push(hashed);
+      fields.push(`password_hash = $${values.length}`);
     }
 
     if (!fields.length) {

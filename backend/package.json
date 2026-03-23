@@ -8,20 +8,26 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "migrate": "tsx src/scripts/migrate.ts",
-    "seed": "tsx src/scripts/seed.ts"
+    "seed": "tsx src/scripts/seed.ts",
+    "test:unit": "tsx --test src/lib/workflow-rules.test.ts"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
+    "exceljs": "^4.4.0",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.16.3"
+    "pdfkit": "^0.18.0",
+    "pg": "^8.16.3",
+    "ttble-platform": "file:.."
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.23",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.5.2",
+    "@types/pdfkit": "^0.17.5",
     "@types/pg": "^8.20.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.2"
